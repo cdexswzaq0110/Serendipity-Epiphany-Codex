@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -I -c \"import subprocess,sys,runpy; root=subprocess.check_output(['git','rev-parse','--show-toplevel'], encoding='utf-8').strip(); sys.argv=[root+'/se.py','hook']; runpy.run_path(sys.argv[0], run_name='__main__')\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "spawn_agent|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -I -c \"import subprocess,sys,runpy; root=subprocess.check_output(['git','rev-parse','--show-toplevel'], encoding='utf-8').strip(); sys.argv=[root+'/se.py','hook']; runpy.run_path(sys.argv[0], run_name='__main__')\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

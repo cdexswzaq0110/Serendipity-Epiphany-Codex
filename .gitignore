@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+.se-state/
+*.sqlite*
+*.db
+*.db-*
+.se-eval/
+.codex/protected.local.toml

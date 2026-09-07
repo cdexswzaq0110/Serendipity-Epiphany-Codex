@@ -1,0 +1,46 @@
+[
+  {
+    "id": "architecture",
+    "goal": "define the memory gateway boundary",
+    "kind": "architecture",
+    "complexity": "complex",
+    "risk": "high",
+    "uncertainty": "high",
+    "write_paths": ["docs/memory-boundary.md"],
+    "depends_on": [],
+    "acceptance": ["boundary and invariants are documented"]
+  },
+  {
+    "id": "implementation",
+    "goal": "implement the approved gateway skeleton",
+    "kind": "implementation",
+    "complexity": "complex",
+    "risk": "high",
+    "uncertainty": "low",
+    "write_paths": ["src/se_codex/memory.py"],
+    "depends_on": ["architecture"],
+    "acceptance": ["unit tests cover acceptance rules"]
+  },
+  {
+    "id": "review",
+    "goal": "review the gateway diff",
+    "kind": "review",
+    "complexity": "standard",
+    "risk": "low",
+    "uncertainty": "low",
+    "write_paths": ["docs/review.md"],
+    "depends_on": ["implementation"],
+    "acceptance": ["review records findings or states none"]
+  },
+  {
+    "id": "research",
+    "goal": "collect a small set of local references",
+    "kind": "research",
+    "complexity": "simple",
+    "risk": "low",
+    "uncertainty": "low",
+    "write_paths": ["docs/references.md"],
+    "depends_on": [],
+    "acceptance": ["references have paths and limits"]
+  }
+]
