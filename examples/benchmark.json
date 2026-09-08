@@ -1,0 +1,98 @@
+{
+  "seed": 20260907,
+  "repeats": 1,
+  "max_seconds": 180,
+  "max_tokens": 250000,
+  "protected_paths": [
+    "examples/benchmark.json"
+  ],
+  "checks": [
+    {
+      "id": "routing-agent-defaults",
+      "argv": [
+        "python",
+        "-c",
+        "import sys, tempfile; from pathlib import Path; sys.path.insert(0, 'src'); from se_codex.routing import route_task; task={'id':'standard','goal':'route a standard task','kind':'implementation','complexity':'standard','risk':'low','uncertainty':'low','write_paths':['src/example.py'],'depends_on':[],'acceptance':['route']}; newline=chr(10);\nwith tempfile.TemporaryDirectory() as raw:\n root=Path(raw); (root/'.codex').mkdir(); (root/'.codex/config.toml').write_text('[agents]' + newline + 'default_subagent_model = \"gpt-5.6-terra\"' + newline + 'default_subagent_reasoning_effort = \"medium\"' + newline); result=route_task(task, root); assert (result['role'], result['model'], result['effort']) == ('terra', 'gpt-5.6-terra', 'medium')\n for change in [{'kind':'architecture'}, {'complexity':'complex'}]:\n  try: route_task({**task, **change}, root)\n  except ValueError: pass\n  else: raise AssertionError('Worker defaults must not replace kernel or specialist configuration')"
+      ],
+      "timeout_seconds": 30
+    },
+    {
+      "id": "installer-runtime-link",
+      "argv": [
+        "python",
+        "-c",
+        "import re, sys, tempfile; from pathlib import Path; sys.path.insert(0, 'src'); from se_codex.install import install_project; source=Path.cwd();\nwith tempfile.TemporaryDirectory() as raw:\n target=Path(raw) / 'target'; target.mkdir(); (target/'.git').mkdir(); result=install_project(source, target, apply=True); assert not result['conflicts']; skill=target/'.agents/skills/se-memory/references/governance.md'; match=re.search(r'`([^`]*docs/MEMORY_RUNBOOK.md)`', skill.read_text(encoding='utf-8')); assert match; destination=(target / match.group(1)).resolve(); assert destination == (target/'.se-codex/docs/MEMORY_RUNBOOK.md').resolve(); assert destination.is_file()"
+      ],
+      "timeout_seconds": 30
+    }
+  ],
+  "arms": [
+    {
+      "id": "direct-luna",
+      "harness": "direct",
+      "model": "gpt-5.6-luna",
+      "effort": "low"
+    },
+    {
+      "id": "closed-loop-luna",
+      "harness": "closed-loop",
+      "model": "gpt-5.6-luna",
+      "effort": "low"
+    },
+    {
+      "id": "closed-loop-terra",
+      "harness": "closed-loop",
+      "model": "gpt-5.6-terra",
+      "effort": "low"
+    }
+  ],
+  "cases": [
+    {
+      "id": "routing-agent-defaults",
+      "repo": "..",
+      "commit": "dcb1891d783866a4ab5e64fa08ab9d7c8ee92722",
+      "task": {
+        "id": "routing-agent-defaults",
+        "goal": "Honor configured default worker model and reasoning effort when a matching agent file is absent.",
+        "kind": "implementation",
+        "complexity": "standard",
+        "risk": "low",
+        "uncertainty": "low",
+        "write_paths": [
+          "src/se_codex/routing.py"
+        ],
+        "depends_on": [],
+        "acceptance": [
+          "A standard task routes through [agents] defaults without a role TOML file.",
+          "Missing kernel or specialist configuration still fails explicitly; default worker settings do not replace them."
+        ],
+        "verify": [
+          "routing-agent-defaults"
+        ]
+      }
+    },
+    {
+      "id": "installer-runtime-link",
+      "repo": "..",
+      "commit": "dcb1891d783866a4ab5e64fa08ab9d7c8ee92722",
+      "task": {
+        "id": "installer-runtime-link",
+        "goal": "Fix the installed memory governance reference: its repository-relative inline runbook path must point to the copied .se-codex runtime documentation.",
+        "kind": "implementation",
+        "complexity": "simple",
+        "risk": "low",
+        "uncertainty": "low",
+        "write_paths": [
+          "src/se_codex/install.py"
+        ],
+        "depends_on": [],
+        "acceptance": [
+          "The installed governance reference gives a repository-relative inline path resolving to the existing .se-codex runbook."
+        ],
+        "verify": [
+          "installer-runtime-link"
+        ]
+      }
+    }
+  ]
+}

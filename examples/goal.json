@@ -1,0 +1,32 @@
+{
+  "goal": "Honor configured default worker model and reasoning effort when a matching agent file is absent.",
+  "acceptance": [
+    "A standard task routes through [agents] defaults without a role TOML file.",
+    "Missing kernel or specialist configuration still fails explicitly; default worker settings do not replace them."
+  ],
+  "write_paths": [
+    "src/se_codex/routing.py"
+  ],
+  "checks": [
+    {
+      "id": "routing-agent-defaults",
+      "argv": [
+        "python",
+        "-c",
+        "import sys, tempfile; from pathlib import Path; sys.path.insert(0, 'src'); from se_codex.routing import route_task; task={'id':'standard','goal':'route a standard task','kind':'implementation','complexity':'standard','risk':'low','uncertainty':'low','write_paths':['src/example.py'],'depends_on':[],'acceptance':['route']}; newline=chr(10);\nwith tempfile.TemporaryDirectory() as raw:\n root=Path(raw); (root/'.codex').mkdir(); (root/'.codex/config.toml').write_text('[agents]' + newline + 'default_subagent_model = \"gpt-5.6-terra\"' + newline + 'default_subagent_reasoning_effort = \"medium\"' + newline); result=route_task(task, root); assert (result['role'], result['model'], result['effort']) == ('terra', 'gpt-5.6-terra', 'medium')\n for change in [{'kind':'architecture'}, {'complexity':'complex'}]:\n  try: route_task({**task, **change}, root)\n  except ValueError: pass\n  else: raise AssertionError('Worker defaults must not replace kernel or specialist configuration')"
+      ],
+      "timeout_seconds": 30
+    }
+  ],
+  "integration_checks": [
+    "routing-agent-defaults"
+  ],
+  "protected_paths": [
+    "tests"
+  ],
+  "max_parallel": 1,
+  "max_rounds": 3,
+  "max_model_calls": 6,
+  "max_seconds": 360,
+  "max_tokens": 700000
+}

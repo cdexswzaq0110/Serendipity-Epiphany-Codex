@@ -124,6 +124,16 @@ def _collect_artifacts(source: Path) -> list[_Artifact]:
 
     for relative in _RUNTIME_FILES:
         files.append((source / relative, Path(".se-codex") / relative))
+    for document in _regular_files(source / 'docs', '*.md'):
+        relative = document.relative_to(source)
+        if relative.as_posix() not in _RUNTIME_FILES:
+            files.append((document, Path('.se-codex') / relative))
+    for document in _regular_files(source / 'docs', '*.json'):
+        files.append((document, Path('.se-codex/docs') / document.name))
+    for name in ('run.json', 'goal.json'):
+        example = source / 'examples' / name
+        if example.exists():
+            files.append((example, Path('.se-codex/examples') / name))
     for module in _regular_files(source / "src/se_codex", "*.py"):
         files.append((module, Path(".se-codex/src/se_codex") / module.name))
     files.append((source / ".codex/config.toml", Path(".se-codex/.codex/config.toml")))
@@ -185,8 +195,11 @@ def _transform(source: Path, destination: Path) -> bytes:
 
     if destination.parts[:2] == (".agents", "skills"):
         text = text.replace("../../../docs/", "../../../.se-codex/docs/")
+    if destination == Path('.agents/skills/se-memory/references/governance.md'):
+        text = text.replace('`docs/MEMORY_RUNBOOK.md`', '`.se-codex/docs/MEMORY_RUNBOOK.md`')
     if destination == Path("AGENTS.md"):
         text = text.replace("docs/MEMORY_RUNBOOK.md", ".se-codex/docs/MEMORY_RUNBOOK.md")
+        text = text.replace('docs/EXECUTION.md', '.se-codex/docs/EXECUTION.md')
     if destination == Path(".codex/hooks.json"):
         text = text.replace("root+'/se.py'", "root+'/.se-codex/se.py'")
         text = re.sub(

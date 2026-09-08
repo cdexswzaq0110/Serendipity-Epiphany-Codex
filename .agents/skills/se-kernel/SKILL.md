@@ -12,3 +12,5 @@ Route architecture, material conflicts, and final acceptance to Astra; difficult
 Delegate only work that is independently useful. Every worker brief names its goal, necessary inputs, write scope, dependencies, verification, stop condition, and output. Parallel writers need disjoint scopes; serialize shared files, schemas, lockfiles, and Git operations. Read [the dispatch reference](references/dispatch.md) when coordinating multiple workers or resolving scope conflicts.
 
 Integrate only results with evidence from the deliverable. Repair from a reproduced failure. Report verified outcomes and unknowns without turning routine tasks into mandatory design or review ceremonies.
+
+For standalone execution, `se.py run` consumes a fixed task contract and `se.py agent` consumes a goal contract. Read [execution contracts](../../../docs/EXECUTION.md) when using these entrypoints; do not assume `plan` dispatches a model.

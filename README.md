@@ -1,6 +1,6 @@
 # Serendipity — Epiphany · Codex
 
-Codex 原生開發 Agent：Astra 負責規劃與整合，Sol / Terra / Luna 分工；附可執行的記憶准入、使用紀錄、污染隔離與恢復工具。Python 3.11+，只用標準庫。
+Codex 開發工具：可獨立使用的執行 harness，以及以模型決策驅動的目標 Agent。Astra 規劃，Sol / Terra / Luna 分工；附記憶准入、使用紀錄、污染隔離與恢復工具。Python 3.11+，只用標準庫。
 
 這是從原 Serendipity — Epiphany 的工作流與記憶治理設計改編的獨立 Codex 版本，保留 MIT 授權。來源專案沒有被覆寫。參考取捨見 [現況分析](docs/INSPECTION.md) 與 [實作規格](docs/IMPLEMENTATION_PLAN.md)。
 
@@ -33,9 +33,25 @@ python se.py safety-probe
 
 在 Codex 開啟此資料夾，使用 `$se-kernel` 並描述目標。核心先確認完成條件，再使用 Codex 原生子 Agent 派發獨立工作。每份工作包含目標、輸入、寫入範圍、依賴、驗證、停止條件；最多同時 3 個 worker。這些是目前任務的子 Agent，無需為每個小步驟建立使用者側欄任務。
 
-原生配置在 `.codex/config.toml` 與 `.codex/agents/*.toml`。路由器從这些檔案讀模型，不重複維護另一份模型清單。`plan` 是可檢查的派工契約；真正啟動子 Agent 由 Codex kernel 執行。不要把規劃器的 JSON 當成模型已執行的證據。
+原生配置在 `.codex/config.toml` 與 `.codex/agents/*.toml`。路由器從这些檔案讀模型，不重複維護另一份模型清單。`plan` 只規劃；v0.2 的 `run` 真正啟動 Codex app-server 工作 task，`agent` 則由模型觀察目標、自行決定派工並接收驗證結果。兩者都留下 thread/turn ID、宿主模型資料、用量和整合 patch，詳見 [執行操作](docs/EXECUTION.md)。
 
 若模型缺少、使用量耗盡或推理等級不支援，應回報實際限制。更改模型是明確的設定修改，沒有自動猜測 alias 或偷偷降級。已知需求不足、寫入範圍重疊、依賴循環等會在派工前被拒絕。
+
+## 真正執行與目標 Agent
+
+```powershell
+# Windows PowerShell；目標須為乾淨且已提交的 Git 專案，以下命令會使用模型用量
+python se.py run --project C:/work/my-project --json C:/work/task.json
+python se.py agent --project C:/work/my-project --json C:/work/goal.json
+```
+
+每個 worker 使用獨立 Git 副本；有依賴的工作等候上游完成，驗證成功的 patch 依序整合，再執行整合檢查。最多三次嘗試，第三次可升級一級；驗收由外層固定 argv 檢查。預設只產生已驗證 patch，加 `--apply` 才套回未變動的目標。模型說「完成」不會跳過檢查。
+
+八個技能保持按需載入：kernel、memory、recover，加上需求探索、系統設計、除錯、雙軸審查和 Git 工作流。Kernel 只拿短索引，需要時才讀細節。
+
+相同真實任務的對照入口是 `python se.py benchmark --json examples/benchmark.json`。它使用固定 commit、固定驗收、相同模型／effort 比較流程，再固定流程／effort 比較模型；詳見 [評測設計](docs/BENCHMARK.md)。測試通過和評測結果必須分開解讀。
+
+已完成一次真實目標 Agent 執行，以及兩項專案任务的模型／流程試跑。結果與發現的缺陷見 [v0.2 實測報告](docs/PILOT_RESULTS.md)；現有小樣本沒有證明整體效率勝過原版。
 
 ## 記憶能做什麼
 
@@ -85,7 +101,7 @@ python se.py install --target $target
 python se.py install --target $target --apply
 ```
 
-第一個指令只列計畫；第二個新增 `.codex` 原生角色、3 個 skills、精簡 `AGENTS.md` 與 `.se-codex` runtime。已有檔案內容不同就整批停止，不覆寫、不自動合併。相同內容可重複安裝。沒有全域安裝、沒有依賴套件下載；遇既有 AGENTS/config 時，依 dry-run 清單逐項整合即可。
+第一個指令只列計畫；第二個新增 `.codex` 原生角色、8 個 skills、精簡 `AGENTS.md` 與 `.se-codex` runtime/文件。已有檔案內容不同就整批停止，不覆寫、不自動合併。相同內容可重複安裝。沒有全域安裝、沒有依賴套件下載；遇既有 AGENTS/config 時，依 dry-run 清單逐項整合即可。
 
 安裝後從目標根目錄執行 `python .se-codex/se.py demo`；診斷目標配置時加 `--project .`。解除安裝請依安裝結果的 created 清單審閱個別新增檔案；工具沒有提供會誤刪其他檔案的遞迴解除安裝。
 

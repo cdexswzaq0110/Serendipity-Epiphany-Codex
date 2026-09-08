@@ -34,6 +34,13 @@ def _profiles(project_root: Path) -> dict[str, dict[str, str]]:
             data = tomllib.load(stream)
         profiles[path.stem] = _profile(data)
 
+    defaults = config.get('agents', {})
+    if isinstance(defaults, dict) and 'terra' not in profiles:
+        fallback = {'model': defaults.get('default_subagent_model'),
+                    'effort': defaults.get('default_subagent_reasoning_effort')}
+        if all(isinstance(value, str) and value.strip() for value in fallback.values()):
+            profiles['terra'] = fallback
+
     return profiles
 
 

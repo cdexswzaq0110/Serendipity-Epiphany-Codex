@@ -1,0 +1,212 @@
+{
+  "date": "2026-09-08",
+  "baseline_commit": "dcb1891d783866a4ab5e64fa08ab9d7c8ee92722",
+  "classification": "development pilot, not held-out benchmark; before worker skill-index reduction",
+  "pilot_runs": [
+    {
+      "trial_id": "installer-runtime-link-closed-loop-luna-r1",
+      "case_id": "installer-runtime-link",
+      "harness": "closed-loop",
+      "model": "gpt-5.6-luna",
+      "effort": "low",
+      "accepted": false,
+      "acceptance_defects": 1,
+      "duration_seconds": 99.062,
+      "usage": {
+        "cached_input_tokens": 237568,
+        "input_tokens": 277158,
+        "output_tokens": 3275,
+        "total_tokens": 280433
+      },
+      "model_calls": 1,
+      "interventions": 0,
+      "failure_reasons": [
+        "token_budget"
+      ]
+    },
+    {
+      "trial_id": "routing-agent-defaults-closed-loop-terra-r1",
+      "case_id": "routing-agent-defaults",
+      "harness": "closed-loop",
+      "model": "gpt-5.6-terra",
+      "effort": "low",
+      "accepted": false,
+      "acceptance_defects": 1,
+      "duration_seconds": 98.906,
+      "usage": {
+        "cached_input_tokens": 239616,
+        "input_tokens": 282296,
+        "output_tokens": 3494,
+        "total_tokens": 285790
+      },
+      "model_calls": 1,
+      "interventions": 0,
+      "failure_reasons": [
+        "token_budget"
+      ]
+    },
+    {
+      "trial_id": "routing-agent-defaults-direct-luna-r1",
+      "case_id": "routing-agent-defaults",
+      "harness": "direct",
+      "model": "gpt-5.6-luna",
+      "effort": "low",
+      "accepted": true,
+      "acceptance_defects": 0,
+      "duration_seconds": 71.797,
+      "usage": {
+        "cached_input_tokens": 161280,
+        "input_tokens": 196770,
+        "output_tokens": 2265,
+        "total_tokens": 199035
+      },
+      "model_calls": 1,
+      "interventions": 0,
+      "failure_reasons": [],
+      "post_review_check_passed": false,
+      "post_review_defect": "Worker default fallback also replaces absent kernel/specialist configuration."
+    },
+    {
+      "trial_id": "installer-runtime-link-direct-luna-r1",
+      "case_id": "installer-runtime-link",
+      "harness": "direct",
+      "model": "gpt-5.6-luna",
+      "effort": "low",
+      "accepted": true,
+      "acceptance_defects": 0,
+      "duration_seconds": 69.437,
+      "usage": {
+        "cached_input_tokens": 163328,
+        "input_tokens": 199270,
+        "output_tokens": 2114,
+        "total_tokens": 201384
+      },
+      "model_calls": 1,
+      "interventions": 0,
+      "failure_reasons": [],
+      "post_review_check_passed": true,
+      "post_review_defect": null
+    },
+    {
+      "trial_id": "installer-runtime-link-closed-loop-terra-r1",
+      "case_id": "installer-runtime-link",
+      "harness": "closed-loop",
+      "model": "gpt-5.6-terra",
+      "effort": "low",
+      "accepted": false,
+      "acceptance_defects": 1,
+      "duration_seconds": 83.125,
+      "usage": {
+        "cached_input_tokens": 216320,
+        "input_tokens": 256320,
+        "output_tokens": 2829,
+        "total_tokens": 259149
+      },
+      "model_calls": 1,
+      "interventions": 0,
+      "failure_reasons": [
+        "token_budget"
+      ]
+    },
+    {
+      "trial_id": "routing-agent-defaults-closed-loop-luna-r1",
+      "case_id": "routing-agent-defaults",
+      "harness": "closed-loop",
+      "model": "gpt-5.6-luna",
+      "effort": "low",
+      "accepted": true,
+      "acceptance_defects": 0,
+      "duration_seconds": 82.593,
+      "usage": {
+        "cached_input_tokens": 172544,
+        "input_tokens": 239777,
+        "output_tokens": 2918,
+        "total_tokens": 242695
+      },
+      "model_calls": 1,
+      "interventions": 0,
+      "failure_reasons": [],
+      "post_review_check_passed": false,
+      "post_review_defect": "Worker default fallback also replaces absent kernel/specialist configuration."
+    }
+  ],
+  "earlier_failed_pilot": ".se-eval/benchmark-20260908T034613Z-49145b52",
+  "raw_pilot": ".se-eval/benchmark-20260908T034950Z-bdab463b",
+  "agent": {
+    "status": "completed",
+    "duration_seconds": 155.672,
+    "model_calls": 3,
+    "usage": {
+      "input_tokens": 458948,
+      "output_tokens": 5065,
+      "cached_input_tokens": 358144,
+      "total_tokens": 464013
+    },
+    "kernel_model": "gpt-5.6-luna",
+    "kernel_effort": "low",
+    "decisions": [
+      "dispatch",
+      "done"
+    ],
+    "inferences": [
+      {
+        "requested_model": "gpt-5.6-luna",
+        "requested_effort": "low",
+        "host_model": "gpt-5.6-luna",
+        "host_effort": "low",
+        "thread_id": "01a07f2c-3164-74c0-9489-8d18418896aa",
+        "turn_id": "01a07f2c-3259-7220-af23-0031361cc82e",
+        "usage": {
+          "input_tokens": 73414,
+          "output_tokens": 815,
+          "cached_input_tokens": 45568,
+          "total_tokens": 74229
+        },
+        "model_evidence": "host_thread_configuration_and_reroute_events",
+        "provider_inference_model": null,
+        "duration_seconds": 25.75
+      },
+      {
+        "requested_model": "gpt-5.6-luna",
+        "requested_effort": "low",
+        "host_model": "gpt-5.6-luna",
+        "host_effort": "low",
+        "thread_id": "01a07f2e-13f9-7652-b87c-ede850428fb8",
+        "turn_id": "01a07f2e-14ed-7fb0-ab44-4710add9e103",
+        "usage": {
+          "input_tokens": 133929,
+          "output_tokens": 772,
+          "cached_input_tokens": 101376,
+          "total_tokens": 134701
+        },
+        "model_evidence": "host_thread_configuration_and_reroute_events",
+        "provider_inference_model": null,
+        "duration_seconds": 32.063
+      },
+      {
+        "requested_model": "gpt-5.6-terra",
+        "requested_effort": "medium",
+        "host_model": "gpt-5.6-terra",
+        "host_effort": "medium",
+        "thread_id": "01a07f2c-987d-7930-a86d-58569b8e0deb",
+        "turn_id": "01a07f2c-9971-7af2-9cc3-c758c2403b13",
+        "usage": {
+          "input_tokens": 251605,
+          "output_tokens": 3478,
+          "cached_input_tokens": 211200,
+          "total_tokens": 255083
+        },
+        "model_evidence": "host_thread_configuration_and_reroute_events",
+        "provider_inference_model": null,
+        "duration_seconds": 94.891
+      }
+    ],
+    "raw_report": ".se-state/agent-38c68c5ba5194f1a89bba8bd841b66cf/report.json"
+  },
+  "limitations": [
+    "Two tasks and one repeat per arm do not establish overall superiority.",
+    "Original Claude harness was not executed; model identity is host configuration plus reroute telemetry.",
+    "Pilot acceptance did not cover missing kernel/specialist fallback. Post-review checks were added afterward.",
+    "Agent demonstration uses explicit Luna kernel, not unavailable Astra."
+  ]
+}

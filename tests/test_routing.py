@@ -42,6 +42,16 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(route_task(task("l", complexity="simple"), self.root)["role"], "luna")
         self.assertEqual(route_task(task("t"), self.root)["role"], "terra")
 
+    def test_worker_defaults_cannot_silently_replace_kernel_or_specialist(self):
+        project = self.root / 'defaults-only'
+        (project / '.codex').mkdir(parents=True)
+        (project / '.codex/config.toml').write_text(
+            '[agents]\ndefault_subagent_model="gpt-5.6-terra"\ndefault_subagent_reasoning_effort="medium"\n')
+        self.assertEqual(route_task(task('standard'), project)['model'], 'gpt-5.6-terra')
+        for item in [task('kernel', kind='architecture'), task('specialist', complexity='complex')]:
+            with self.assertRaisesRegex(ValueError, 'no configured model'):
+                route_task(item, project)
+
     def test_waves_respect_dependencies_conflicts_and_config_limit(self):
         result = plan_tasks([
             task("a", write_paths=["src/a.py"]),

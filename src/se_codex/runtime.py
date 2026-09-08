@@ -2,13 +2,17 @@
 from __future__ import annotations
 
 import json
+import os
 import queue
 import shutil
+import signal
 import subprocess
 import threading
 import time
 import tomllib
 from pathlib import Path
+
+from . import __version__
 
 
 def codex_command() -> list[str]:
@@ -28,19 +32,21 @@ def codex_command() -> list[str]:
 class AppServer:
     """One bounded local connection; no account credentials or transcripts are read."""
 
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, on_message=None, timeout=20):
+        self.on_message = on_message
+        self.pending = []
         self.process = subprocess.Popen(
             [*codex_command(), "app-server", "--stdio"], cwd=root,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
             text=True, encoding="utf-8", bufsize=1,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0), start_new_session=os.name != 'nt')
         self.messages: queue.Queue = queue.Queue()
         self.next_id = 0
         self.reader = threading.Thread(target=self._read, daemon=True)
         self.reader.start()
         try:
-            self.call("initialize", {"clientInfo": {"name": "se_codex", "version": "0.1.0"},
-                                     "capabilities": {"experimentalApi": True}})
+            self.call("initialize", {"clientInfo": {"name": "se_codex", "version": __version__},
+                                     "capabilities": {"experimentalApi": True}}, timeout=timeout)
             self.send({"method": "initialized", "params": {}})
         except Exception:
             self.close()
@@ -76,15 +82,45 @@ class AppServer:
                 if "error" in message:
                     raise ValueError(f"{method}: {message['error'].get('message', 'request failed')}")
                 return message.get("result", {})
+            self.handle(message)
         raise ValueError(f"Codex app-server timeout: {method}")
+
+    def handle(self, message):
+        if self.on_message:
+            self.on_message(message)
+        else:
+            self.pending.append(message)
+        # Unattended execution never grants an approval or answers on a user's behalf.
+        if 'id' in message and 'method' in message:
+            method = message['method']
+            if method.endswith('/requestApproval'):
+                self.send({'id': message['id'], 'result': {'decision': 'cancel'}})
+            else:
+                self.send({'id': message['id'], 'error': {'code': -32601, 'message': 'Interactive action requires operator input'}})
+
+    def receive(self, timeout=1):
+        try:
+            message = self.messages.get(timeout=timeout)
+        except queue.Empty:
+            return
+        if message is None:
+            raise ValueError('Codex app-server disconnected')
+        self.handle(message)
 
     def close(self):
         if self.process.poll() is None:
-            self.process.terminate()
+            if os.name == 'nt':
+                subprocess.run(['taskkill', '/PID', str(self.process.pid), '/T', '/F'],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
+            else:
+                os.killpg(self.process.pid, signal.SIGTERM)
             try:
                 self.process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                self.process.kill()
+                if os.name == 'nt':
+                    self.process.kill()
+                else:
+                    os.killpg(self.process.pid, signal.SIGKILL)
                 self.process.wait(timeout=5)
         self.reader.join(timeout=1)
         for stream in (self.process.stdin, self.process.stdout):
@@ -226,14 +262,20 @@ def _discover_hooks(raw: object, root: Path) -> tuple[dict, list[str]]:
     return {"hooks": hooks}, limitations
 
 
-def _list_models(server: AppServer) -> list[dict]:
+def _list_models(server: AppServer, deadline=None) -> list[dict]:
     catalog = []
     cursor = None
     for _ in range(20):
         params = {"limit": 100, "includeHidden": False}
         if cursor:
             params["cursor"] = cursor
-        page = server.call("model/list", params)
+        if deadline is None:
+            page = server.call("model/list", params)
+        else:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ValueError('Model discovery deadline reached')
+            page = server.call('model/list', params, timeout=min(20, remaining))
         if not isinstance(page, dict):
             raise ValueError("model/list returned a non-object response")
         data = page.get("data", [])
