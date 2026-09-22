@@ -105,8 +105,14 @@ class MemoryTests(unittest.TestCase):
         self.assertTrue({used, artifact['artifact_id'], downstream, derived['memory_id'], effect['effect_id']} <= causal)
         self.assertIn(exposed, {event['object']['id'] for event in report['exposed']})
         self.assertEqual(report['effects'][0]['status'], 'uncertain')
+        self.assertEqual(report['impacted_effect_ids'], [effect['effect_id']])
+        self.assertEqual(report['unsettled_effect_ids'], [effect['effect_id']])
         self.assert_code('scope_frozen', self.work, 'run-start')
-        self.call('scope-release', incident_id=report['incident_id'], evidence='outputs isolated; external export unresolved, disabled')
+        self.assert_code('scope_frozen', self.work, 'effect-record', effect_id=effect['effect_id'], status='uncertain')
+        self.assert_code('unsettled_effects', self.call, 'scope-release', incident_id=report['incident_id'], evidence='outputs isolated')
+        self.assert_code('invalid_input', self.call, 'effect-record', effect_id=effect['effect_id'], status='failed')
+        self.call('effect-record', effect_id=effect['effect_id'], status='failed', evidence='external system confirmed no export')
+        self.call('scope-release', incident_id=report['incident_id'], evidence='outputs isolated; external status verified')
         self.assert_code('stale_epoch', self.work, 'recall', run_id=used, query='python')
         self.assert_code('unsafe_provenance', self.call, 'activate', memory_id=derived['memory_id'], revision=1, policy_version='v2', evidence='attempt')
         new = self.work('run-start')['run_id']
@@ -219,6 +225,35 @@ class MemoryTests(unittest.TestCase):
         self.work('effect-record', effect_id=fix['effect_id'], status='applied', external_reference='fixture:2')
         result = self.call('effect-record', effect_id=original['effect_id'], status='compensated', evidence='external state independently checked', compensation_effect_id=fix['effect_id'])
         self.assertFalse(result['executed'])
+
+    def test_operator_can_compensate_an_impacted_effect_while_scope_is_frozen(self):
+        item, _, _, downstream, _, _, effect = self.chain()
+        report = self.call('revoke', memory_id=item['memory_id'], revision=1, reason='incorrect source')
+        self.assert_code('invalid_input', self.call, 'effect-plan', run_id=downstream, tool='undo', target='fixture', idempotency_key='undo-1', compensates_effect_id=effect['effect_id'])
+        fix = self.call('effect-plan', run_id=downstream, tool='undo', target='fixture', idempotency_key='undo-1', compensates_effect_id=effect['effect_id'], evidence='operator approved external compensation')
+        self.call('effect-record', effect_id=fix['effect_id'], status='applied', external_reference='fixture:undo-1', evidence='external compensation completed')
+        self.call('effect-record', effect_id=effect['effect_id'], status='compensated', evidence='external state independently checked', compensation_effect_id=fix['effect_id'])
+        self.call('scope-release', incident_id=report['incident_id'], evidence='compensation verified')
+
+    def test_unsettled_frozen_compensation_blocks_release_after_original_is_reconciled(self):
+        item, _, _, downstream, _, _, effect = self.chain()
+        report = self.call('revoke', memory_id=item['memory_id'], revision=1, reason='incorrect source')
+        fix = self.call('effect-plan', run_id=downstream, tool='undo', target='fixture', idempotency_key='undo-pending', compensates_effect_id=effect['effect_id'], evidence='operator approved external compensation')
+        self.call('effect-record', effect_id=effect['effect_id'], status='applied', evidence='external status independently confirmed')
+        current = self.call('incident-report', incident_id=report['incident_id'])
+        self.assertIn(fix['effect_id'], current['impacted_effect_ids'])
+        self.assertIn(fix['effect_id'], current['unsettled_effect_ids'])
+        self.assert_code('unsettled_effects', self.call, 'scope-release', incident_id=report['incident_id'], evidence='original reconciled')
+        self.call('effect-record', effect_id=fix['effect_id'], status='applied', evidence='external compensation completed')
+        self.call('scope-release', incident_id=report['incident_id'], evidence='all external effects settled')
+
+    def test_worker_cannot_record_an_effect_from_a_stale_epoch(self):
+        run = self.work('run-start')['run_id']
+        effect = self.work('effect-plan', run_id=run, tool='fixture', target='local', idempotency_key='stale-effect')
+        item = self.memory()
+        incident = self.call('revoke', memory_id=item['memory_id'], revision=1, reason='unrelated memory is unsafe')
+        self.call('scope-release', incident_id=incident['incident_id'], evidence='no dependent external effects')
+        self.assert_code('stale_epoch', self.work, 'effect-record', effect_id=effect['effect_id'], status='applied')
 
     def test_mcp_has_fixed_worker_authority(self):
         def request(op, args):

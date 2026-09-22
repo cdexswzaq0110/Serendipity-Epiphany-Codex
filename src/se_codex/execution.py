@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import signal
+import sqlite3
 from pathlib import Path
 import subprocess
 import sys
@@ -125,6 +126,28 @@ def read_report(directory):
             'journal_integrity': 'verified_hash_chain; not an external authenticity proof'}
 
 
+def memory_status(spec):
+    """Read an existing memory binding without creating a database or scope."""
+    from .memory import SCHEMA_VERSION
+    connection = None
+    try:
+        uri = Path(spec['db']).resolve().as_uri() + '?mode=ro'
+        connection = sqlite3.connect(uri, uri=True)
+        version = connection.execute('PRAGMA user_version').fetchone()[0]
+        if version != SCHEMA_VERSION:
+            raise ValueError(f'Unsupported memory schema version: {version}')
+        row = connection.execute('SELECT epoch, frozen FROM scopes WHERE scope = ?',
+                                 (spec['scope'],)).fetchone()
+        if row is None:
+            raise ValueError(f"Memory scope is not initialized: {spec['scope']}")
+        return {'epoch': row[0], 'frozen': bool(row[1])}
+    except sqlite3.Error as error:
+        raise ValueError('Memory binding cannot be read: ' + str(error)) from error
+    finally:
+        if connection is not None:
+            connection.close()
+
+
 def validate_manifest(manifest, project, tool_root):
     if not isinstance(manifest, dict):
         raise ValueError('execution manifest must be an object')
@@ -133,6 +156,12 @@ def validate_manifest(manifest, project, tool_root):
         if (not isinstance(memory, dict) or not isinstance(memory.get('db'), str)
                 or not Path(memory['db']).is_file() or not isinstance(memory.get('scope'), str) or not memory['scope']):
             raise ValueError('memory requires an existing database path and a scope')
+        memory['db'] = str(Path(memory['db']).resolve(strict=True))
+        expected_epoch = memory.get('expected_epoch')
+        if expected_epoch is not None and (not isinstance(expected_epoch, int) or isinstance(expected_epoch, bool)
+                                           or expected_epoch < 0):
+            raise ValueError('memory expected_epoch must be a non-negative integer')
+        memory_status(memory)
     for key, default, low, high in [('max_attempts', 3, 1, 3), ('max_parallel', 3, 1, 3),
                                   ('max_model_calls', 8, 1, 30), ('max_seconds', 600, 1, 3600),
                                   ('max_tokens', 100000, 1, 1000000)]:
@@ -271,19 +300,14 @@ def execute(manifest, project: Path, tool_root: Path, state_root: Path, mode='cl
     allocated = 0
     consumed = 0
     unknown_usage = False
-    memory_epoch = None
+    memory_epoch = manifest.get('memory', {}).get('expected_epoch')
 
     def memory_changed():
         nonlocal memory_epoch
         if 'memory' not in manifest:
             return False
-        from .memory import MemoryStore
         spec = manifest['memory']
-        store = MemoryStore(spec['db'], scope=spec['scope'], role='operator')
-        try:
-            status = store.execute('status', {'scope': spec['scope']})['data']
-        finally:
-            store.close()
+        status = memory_status(spec)
         if memory_epoch is None:
             memory_epoch = status['epoch']
         return bool(status['frozen'] or status['epoch'] != memory_epoch)
@@ -421,6 +445,8 @@ def execute(manifest, project: Path, tool_root: Path, state_root: Path, mode='cl
         if failed or cancelled() or consumed > manifest['max_tokens'] or unknown_usage:
             raise ValueError('One or more tasks failed, were blocked, or memory/cancellation stopped integration')
         report['checks'] = verify_checks(manifest['checks'], manifest['integration_checks'], integration, journal.event, deadline)
+        if cancelled():
+            raise ValueError('Cancellation or memory epoch changed during integration verification')
         if not all(x['passed'] for x in report['checks']):
             raise ValueError('Combined changes failed integration verification')
         if git(integration, 'status', '--porcelain', '--untracked-files=all').strip():
@@ -436,6 +462,8 @@ def execute(manifest, project: Path, tool_root: Path, state_root: Path, mode='cl
                 raise ValueError('Target HEAD or memory changed before apply')
             apply_patch(project, patch)
             report['applied'] = True
+        elif cancelled():
+            raise ValueError('Cancellation or memory epoch changed before accepting result')
         report['status'] = 'completed'
         journal.event(kind='integration_verified', patch_sha256=report['patch_sha256'], applied=report['applied'])
     except (ValueError, OSError) as error:

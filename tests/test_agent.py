@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -7,6 +8,8 @@ import threading
 import unittest
 
 from se_codex.agent import run_agent
+from se_codex.execution import execute
+from se_codex.memory import MemoryStore
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -129,6 +132,25 @@ class AgentTests(unittest.TestCase):
         self.assertFalse(report["checks"][0]["passed"])
         self.assertEqual((self.project / "app.txt").read_text(encoding="utf-8"), "old\n")
 
+    def test_goal_stores_absolute_memory_database_binding(self):
+        database = self.root / 'memory.sqlite'
+        operator = MemoryStore(str(database), scope='project')
+        operator.close()
+        previous = Path.cwd()
+        try:
+            os.chdir(self.root)
+            report = run_agent(
+                self._spec(memory={'db': 'memory.sqlite', 'scope': 'project'}),
+                self.project,
+                ROOT,
+                self.state,
+                runner=SequencedRunner([inference(decision('blocked', 'fixture stop'))]),
+            )
+        finally:
+            os.chdir(previous)
+        stored = json.loads(Path(report['run_directory'], 'goal.json').read_text(encoding='utf-8'))
+        self.assertEqual(stored['memory']['db'], str(database.resolve()))
+
     def test_kernel_cannot_expand_authorized_write_paths(self):
         runner = SequencedRunner(
             [inference(decision("dispatch", tasks=[self._task(["outside.txt"])]))]
@@ -192,6 +214,67 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(report["status"], "blocked")
         self.assertIn("stopped", report["error"].casefold())
         self.assertEqual((self.project / "app.txt").read_text(encoding="utf-8"), "old\n")
+
+    def test_agent_monitor_does_not_recreate_deleted_memory_database(self):
+        database = self.root / 'memory.sqlite'
+        operator = MemoryStore(str(database), scope='project')
+        operator.close()
+
+        def delete_binding(_root, _kwargs):
+            database.unlink()
+            return inference(decision('done', 'database disappeared'))
+
+        report = run_agent(
+            self._spec(memory={'db': str(database), 'scope': 'project'}),
+            self.project,
+            ROOT,
+            self.state,
+            runner=SequencedRunner([delete_binding]),
+        )
+
+        self.assertEqual(report['status'], 'blocked')
+        self.assertFalse(database.exists())
+
+    def test_epoch_change_after_kernel_decision_prevents_worker_dispatch(self):
+        database = self.root / 'memory.sqlite'
+        operator = MemoryStore(str(database), scope='project')
+        candidate = operator.execute('source-propose', {
+            'scope': 'project', 'source_kind': 'external',
+            'locator': 'test:decision-gap', 'content': 'changed evidence',
+        })['data']
+        worker_calls = []
+
+        def worker(root, _kwargs):
+            worker_calls.append(root)
+            (root / 'app.txt').write_text('new\n', encoding='utf-8')
+            return inference('implemented')
+
+        runner = SequencedRunner([
+            inference(decision('dispatch', tasks=[self._task()])),
+            worker,
+        ])
+
+        def change_epoch_then_execute(manifest, *args, **kwargs):
+            operator.execute('activate', {
+                'scope': 'project', 'memory_id': candidate['memory_id'], 'revision': 1,
+                'evidence': 'accepted after kernel decision', 'policy_version': 'test-v1',
+            })
+            return execute(manifest, *args, **kwargs)
+
+        try:
+            report = run_agent(
+                self._spec(memory={'db': str(database), 'scope': 'project'}),
+                self.project,
+                ROOT,
+                self.state,
+                runner=runner,
+                executor=change_epoch_then_execute,
+            )
+            self.assertEqual(report['status'], 'blocked')
+            self.assertEqual(worker_calls, [])
+            self.assertEqual(len(runner.calls), 1)
+        finally:
+            operator.close()
 
 
 if __name__ == "__main__":

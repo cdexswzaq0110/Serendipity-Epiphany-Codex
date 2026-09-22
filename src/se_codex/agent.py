@@ -7,7 +7,8 @@ import time
 import uuid
 
 from .execution import (Journal, apply_patch, checked_project, clone, execute, git,
-                        usage_sum, verify_checks, RESERVED, skill_catalog, validate_manifest, save_report)
+                        usage_sum, verify_checks, RESERVED, skill_catalog, validate_manifest, save_report,
+                        memory_status)
 from .routing import _canonical_path, _conflicts, _profiles
 from .transport import run_codex
 
@@ -80,13 +81,8 @@ def run_agent(spec, project: Path, tool_root: Path, state_root: Path, *, apply=F
         if (directory / 'STOP').exists() or time.monotonic() >= deadline:
             return True
         if spec.get('memory'):
-            from .memory import MemoryStore
             mem = spec['memory']
-            store = MemoryStore(mem['db'], scope=mem['scope'], role='operator')
-            try:
-                state = store.execute('status', {'scope': mem['scope']})['data']
-            finally:
-                store.close()
+            state = memory_status(mem)
             if memory_epoch is None:
                 memory_epoch = state['epoch']
             return state['frozen'] or memory_epoch != state['epoch']
@@ -164,6 +160,8 @@ def run_agent(spec, project: Path, tool_root: Path, state_root: Path, *, apply=F
                         raise ValueError('Kernel attempted to expand the authorized write scope')
             calls_left, tokens_left = budget()
             manifest = {key: spec[key] for key in ['checks', 'integration_checks', 'protected_paths', 'memory'] if key in spec}
+            if 'memory' in manifest:
+                manifest['memory'] = {**manifest['memory'], 'expected_epoch': memory_epoch}
             manifest.update(tasks=tasks, max_attempts=3, max_model_calls=calls_left,
                             max_tokens=tokens_left, max_seconds=max(1, int(deadline - time.monotonic())),
                             max_parallel=spec.get('max_parallel', 3), stop_file=str(directory / 'STOP'))

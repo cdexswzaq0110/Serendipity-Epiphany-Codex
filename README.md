@@ -53,6 +53,8 @@ python se.py agent --project C:/work/my-project --json C:/work/goal.json
 
 已完成一次真實目標 Agent 執行，以及兩項專案任务的模型／流程試跑。結果與發現的缺陷見 [v0.2 實測報告](docs/PILOT_RESULTS.md)；現有小樣本沒有證明整體效率勝過原版。
 
+2026-09-22 的 v0.3 補強：新增 `recover` 事故處理入口、未確認外部效果的解封限制、隔離期間的可追蹤補償，以及跨 kernel/worker 的 epoch 檢查。設計、圖片五層防護的落實方式與驗證界線見 [v0.3 迭代紀錄](docs/ITERATION_V03.md)。本機最新能力查詢仍未列 Astra；保留指定核心模型並回報阻擋，不自動降級。
+
 ## 記憶能做什麼
 
 ```text
@@ -77,6 +79,8 @@ python se.py agent --project C:/work/my-project --json C:/work/goal.json
 - 外部操作有 planned / applied / uncertain 等紀錄，補償必須有對應結果與操作者證據。工具不假裝能收回已寄出的信或自動恢復所有外部系統。
 
 完整操作、每個 API 欄位與事故流程見 [記憶操作手冊](docs/MEMORY_RUNBOOK.md)。
+
+已知污染修訂時，可用 `python se.py recover --db DATABASE --scope SCOPE --json REQUEST.json --run RUN_DIRECTORY`，一次隔離記憶、向指定且綁定相同記憶庫的執行寫入 STOP、產生一致 SQLite 備份與事故交接檔。此指令不呼叫模型、不覆蓋工作成果、不宣稱清除了既有模型上下文；完整可執行範例見操作手冊。
 
 ## 啟用方式與權限界線
 
@@ -106,6 +110,8 @@ python se.py install --target $target --apply
 安裝後從目標根目錄執行 `python .se-codex/se.py demo`；診斷目標配置時加 `--project .`。解除安裝請依安裝結果的 created 清單審閱個別新增檔案；工具沒有提供會誤刪其他檔案的遞迴解除安裝。
 
 ## 下一輪優先順序
+
+若目標是往更通用、自主且能累積可靠經驗的 Agent 發展，見 [AGI 導入構想](docs/AGI_ROADMAP.md)。這是分階段設計提案；不將多模型與長期記憶直接宣稱為 AGI。
 
 1. 在實際提供 Astra 且額度可用的主機，完成原生多模型任務驗收，記錄延遲、耗用量與返工率，再調整難度分級。
 2. 在專用 worker 任務啟用生成的權限配置，验证 MCP、其他工具與實際資料庫的整體邊界；高敏感環境改用獨立 OS 身分或受管 broker。

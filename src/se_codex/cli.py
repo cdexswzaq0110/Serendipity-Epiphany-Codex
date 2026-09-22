@@ -72,6 +72,12 @@ def parser():
     report.add_argument('--run', type=Path, required=True)
     stop = commands.add_parser('stop', help='Request an orderly stop at the next execution boundary')
     stop.add_argument('--run', type=Path, required=True)
+    recover = commands.add_parser('recover', help='Quarantine memory, stop named bound runs, and preserve a consistent local backup')
+    recover.add_argument('--db', type=Path, required=True)
+    recover.add_argument('--scope', required=True)
+    recover.add_argument('--json', required=True, help='memory_id, revision, reason, and optional incident_id')
+    recover.add_argument('--state', type=Path, default=ROOT / '.se-state')
+    recover.add_argument('--run', type=Path, action='append', default=[], help='Explicit affected run directory; repeat as needed')
     return result
 
 
@@ -118,6 +124,11 @@ def main(argv=None):
                 emit({'ok': True, 'data': {'stop_requested': True}})
             else:
                 emit({'ok': True, 'data': data})
+        elif arguments.command == 'recover':
+            from .recovery import contain_memory
+            data = contain_memory(arguments.db, arguments.scope, read_json(arguments.json), arguments.state, arguments.run)
+            emit({'ok': data['status'] == 'contained', 'data': data})
+            return 0 if data['status'] == 'contained' else 3
         elif arguments.command == "memory":
             from .memory import MemoryStore
             body = read_json(arguments.json)

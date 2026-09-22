@@ -1,11 +1,13 @@
 from pathlib import Path
+import os
+import sqlite3
 import subprocess
 import sys
 import tempfile
 import threading
 import unittest
 
-from se_codex.execution import execute, read_report
+from se_codex.execution import execute, read_report, validate_manifest
 from se_codex.memory import MemoryStore
 
 
@@ -125,6 +127,63 @@ class ExecutionTests(unittest.TestCase):
         self.assertTrue(Path(report["patch"]).read_bytes())
         self.assertEqual(report["model_calls"], 1)
         self.assertEqual(report["usage"]["total_tokens"], 20)
+
+    def test_memory_database_is_stored_as_an_absolute_recovery_binding(self):
+        database = self.root / 'memory.sqlite'
+        operator = MemoryStore(str(database), scope='project')
+        operator.close()
+        manifest = self._manifest(memory={'db': 'memory.sqlite', 'scope': 'project'})
+        previous = Path.cwd()
+        try:
+            os.chdir(self.root)
+            validate_manifest(manifest, self.project, ROOT)
+        finally:
+            os.chdir(previous)
+        self.assertEqual(manifest['memory']['db'], str(database.resolve()))
+
+    def test_unknown_memory_scope_is_rejected_without_creating_it_or_calling_model(self):
+        database = self.root / 'memory.sqlite'
+        operator = MemoryStore(str(database), scope='project')
+        operator.close()
+        runner = FakeRunner([])
+
+        with self.assertRaisesRegex(ValueError, 'scope'):
+            execute(
+                self._manifest(memory={'db': str(database), 'scope': 'typo'}),
+                self.project,
+                ROOT,
+                self.state,
+                runner=runner,
+            )
+
+        connection = sqlite3.connect(database)
+        try:
+            scopes = [row[0] for row in connection.execute('SELECT scope FROM scopes')]
+        finally:
+            connection.close()
+        self.assertEqual(scopes, ['project'])
+        self.assertEqual(runner.calls, [])
+
+    def test_unsupported_memory_schema_is_rejected_before_model_call(self):
+        database = self.root / 'memory.sqlite'
+        operator = MemoryStore(str(database), scope='project')
+        operator.close()
+        connection = sqlite3.connect(database)
+        try:
+            connection.execute('PRAGMA user_version = 999')
+        finally:
+            connection.close()
+        runner = FakeRunner([])
+
+        with self.assertRaisesRegex(ValueError, 'schema version'):
+            execute(
+                self._manifest(memory={'db': str(database), 'scope': 'project'}),
+                self.project,
+                ROOT,
+                self.state,
+                runner=runner,
+            )
+        self.assertEqual(runner.calls, [])
 
     def test_failed_dependency_never_dispatches_or_reaches_source(self):
         first = self._task("first")
@@ -252,6 +311,69 @@ class ExecutionTests(unittest.TestCase):
             report = execute(self._manifest(memory={'db': str(database), 'scope': 'project'}),
                              self.project, ROOT, self.state, apply=True, runner=FakeRunner([contaminated]))
             self.assertEqual(report['status'], 'blocked')
+            self.assertEqual((self.project / 'app.txt').read_text(), 'old\n')
+        finally:
+            operator.close()
+
+    def test_deleted_memory_database_is_not_recreated_by_runtime_monitor(self):
+        database = self.root / 'memory.sqlite'
+        operator = MemoryStore(str(database), scope='project')
+        operator.close()
+
+        def delete_binding(root, _kwargs):
+            (root / 'app.txt').write_text('new\n', encoding='utf-8')
+            database.unlink()
+            return completed()
+
+        report = execute(
+            self._manifest(memory={'db': str(database), 'scope': 'project'}),
+            self.project,
+            ROOT,
+            self.state,
+            apply=True,
+            runner=FakeRunner([delete_binding]),
+        )
+
+        self.assertEqual(report['status'], 'blocked')
+        self.assertFalse(database.exists())
+        self.assertEqual((self.project / 'app.txt').read_text(), 'old\n')
+
+    def test_memory_epoch_change_during_final_check_rejects_unapplied_result(self):
+        database = self.root / 'memory.sqlite'
+        operator = MemoryStore(str(database), scope='project')
+        try:
+            candidate = operator.execute('source-propose', {
+                'scope': 'project', 'source_kind': 'external',
+                'locator': 'test:late-change', 'content': 'late evidence',
+            })['data']
+            activate = (
+                "import sys; from pathlib import Path; "
+                f"sys.path.insert(0, {str(ROOT / 'src')!r}); "
+                "from se_codex.memory import MemoryStore; "
+                f"store=MemoryStore({str(database)!r}, scope='project'); "
+                f"store.execute('activate', {{'scope':'project','memory_id':{candidate['memory_id']!r},"
+                "'revision':1,'evidence':'verified during final check','policy_version':'test-v1'}); "
+                "store.close()"
+            )
+            checks = [self._check(), {
+                'id': 'late-memory-change',
+                'argv': [sys.executable, '-c', activate],
+                'timeout_seconds': 10,
+            }]
+            report = execute(
+                self._manifest(
+                    checks=checks,
+                    integration_checks=['content', 'late-memory-change'],
+                    memory={'db': str(database), 'scope': 'project'},
+                ),
+                self.project,
+                ROOT,
+                self.state,
+                apply=False,
+                runner=FakeRunner([self._write('new\n')]),
+            )
+            self.assertEqual(report['status'], 'blocked')
+            self.assertIn('memory', report['error'].casefold())
             self.assertEqual((self.project / 'app.txt').read_text(), 'old\n')
         finally:
             operator.close()

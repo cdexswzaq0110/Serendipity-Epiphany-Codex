@@ -88,7 +88,38 @@ $baseline = Invoke-Memory 'snapshot' @{}
 4. **修復副作用。** 對輸出檔案先比對 Git，再在新的修復分支製作修正，跑相關測試。對外部操作查詢外部系統：已寄出的訊息可能只能補發更正；狀態未知時標 uncertain，不自動重送。
 5. **恢復記憶。** 審閱 restore-plan 的新增、退休、撤銷排除與衝突；隔離尚未解除時即可套用。恢復保留完整安全日誌及後來的撤銷紀錄。
 6. **換新上下文。** 在新的 Codex 任務/全新子 Agent 中，以可信使用者目標、乾淨程式碼與有效記憶重新開始。不要 fork 整段受污染歷史，也不要把污染的摘要當新任務指令。其他 Agent 的「審核通過」只是額外證據，不能證明原上下文已清除。
-7. **完成驗收後解封。** 逐事件 scope-release，需要操作者證據。若還有其他 open incident，scope 繼續凍結；所有舊 run 仍然失效。
+7. **完成驗收後解封。** 逐事件 scope-release，需要操作者證據。若 causal effects（包括隔離期間建立的補償）仍是 planned / uncertain / manual_required，回傳 `unsettled_effects`；先核對外部狀態。若還有其他 open incident，scope 繼續凍結；所有舊 run 仍然失效。
+
+### 一次保全事故現場
+
+`recover` 是操作者 CLI，固定執行 quarantine，不會把 request 裡的文字當成 shell 命令。以下接續前面 helper；`$candidate` 為已知有問題的記憶。範例不傳 `--run`，所以只隔離與備份記憶庫，不聲稱已停止任何原生任務。
+
+```powershell
+# Windows PowerShell；使用現有 $candidate、$database、$scope、$state
+$requestPath = Join-Path $state 'incident-request.json'
+$requestBody = @{memory_id=$candidate.memory_id; revision=1; reason='獨立查核發現來源錯誤'}
+[IO.File]::WriteAllText($requestPath, ($requestBody | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
+python se.py recover --db $database --scope $scope --json $requestPath --state $state
+```
+
+若先前 `run` / `agent` 回報了執行目錄，附上 `--run`（可重複，最多 16 個）：
+
+```powershell
+# Windows PowerShell；輸入 report 中實際存在的 run_directory
+$affectedRun = Read-Host '受影響執行的 run_directory'
+python se.py recover --db $database --scope $scope --json $requestPath --state $state --run $affectedRun
+```
+
+執行結果含 `directory`，裡面有：
+
+- `recovery.json`：事件、受影響 effects、STOP 結果、證據雜湊與捕捉錯誤。
+- `memory-backup.sqlite`：SQLite backup API 產生的整庫一致備份，包含已提交的 WAL 內容與安全日誌。只有報告含 `backup` 且 integrity_check 為 ok 才視為成功；`backup_failure` 指向的殘留檔不可用。
+- `run-N/`：指定執行的契約、報告、事件日誌及現有 result.patch 副本；單檔上限 32 MiB，超限明報錯誤。
+- `FRESH_START.md`：操作者交接步驟，不複製污染內容為新任務提示。
+
+先隔離再保全；即使某個 run 綁定不符或備份失敗，scope 仍維持隔離，報告為 `contained_with_errors`、exit 3。如果另一位操作者在保全期間解封，回報 `containment_lost`、exit 3，不假稱仍已隔離。成功 exit 0 只表示這次隔離與指定證據擷取完成，**不是事故解決或程序已終止**。STOP 是請求，需查看原生 task 與最終 run report 確認停止。
+
+新執行的契約保存絕對 DB 路徑；舊契約若只有相對路徑，recover 拒絕猜測，需手動檢查並使用 `stop --run`。工具不遍歷所有聊天，未指定、未綁定的任務与外部工具仍需檢查。整庫備份與報告可能包含專案內容，存於操作者控制的位置；內建 `.gitignore` 只避免一般 Git 誤加，不是 OS 權限隔離。備份是事故證據，不可直接覆蓋 live DB，亦不能抹除後續撤銷紀錄。
 
 可以接續前面範例演練該記憶被發現錯誤的情形：
 
@@ -146,6 +177,23 @@ Invoke-Memory 'recall' @{run_id=$newRun.run_id; query='python'}
 父記憶與父產物格式為 `[{"id":"...","revision":1}]`；source_ids 是字串陣列。artifact 只記錄 content 的 SHA-256，不寫 locator 指向的檔案。記錄產物、來源及外部效果需要工具呼叫端配合，不能自動觀測未接入的工具。
 
 effect-plan 只記錄計畫、不執行操作。外部呼叫前持久化 idempotency_key，外部回應後記錄 applied/failed/uncertain/manual_required。對有副作用的超時先查外部狀態；不能把工具自己的 idempotency_key 當成外部服務已支援冪等。補償使用另一個 effect-plan，連回原 effect，實際確認它 applied 後，由操作者將原 effect 標 compensated。
+
+v0.3 起，worker 的 effect-record 也受 frozen/epoch 檢查，包含重複呼叫；延遲到達的外部結果需交給操作者核對紀錄。對 impacted effect 記錄 applied/failed 必須有 operator `evidence`。incident-report 另列 `impacted_effect_ids`、`unsettled_effect_ids`。`applied` 只表示已核對執行，不能證明業務後果已修復；scope-release 的 evidence 仍須交代產物與外部處置。
+
+隔離期間可以建立補償計畫，但只限 operator、已有同 scope 的 run、原操作屬於 open incident 的 impacted effect，且必填 evidence。普通 effect-plan 仍被凍結。新增補償會附到對應事件，未確認其結果前不能解封。以下為資料契約（不會執行外部操作），值必須填入真實事件及查核結果：
+
+```json
+{
+  "run_id": "既有受影響的 run_id",
+  "tool": "實際補償工具名稱",
+  "target": "已確認的原操作目標",
+  "idempotency_key": "此次補償的唯一識別",
+  "compensates_effect_id": "原 effect_id",
+  "evidence": "操作者查核及補償授權依據"
+}
+```
+
+將此物件交給 `effect-plan`；實際完成補償後，以其 effect_id、`status: applied` 和 evidence 執行 `effect-record`，再對原 effect 記錄 `status: compensated`、`compensation_effect_id` 與 evidence。不得將示意 evidence 当成查核已完成。
 
 ## 快照與備份
 

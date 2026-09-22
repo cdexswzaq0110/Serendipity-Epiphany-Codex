@@ -57,6 +57,8 @@ python se.py stop --run C:/work/state/run-id
 
 Manifest 可附 `memory: {db, scope}` 綁定既有 memory store。Supervisor 在開始、工具等待、派工和整合邊界檢查 frozen/epoch；污染、撤銷或記憶變更時丟棄舊上下文並停止整合。此入口目前不自動召回或寫入長期記憶，避免未知記憶被偷偷灌入 kernel。來源／候選／receipt／回復仍走 [記憶操作手冊](MEMORY_RUNBOOK.md) 的 gateway。被污染的原生聊天不會被程式「洗乾淨」。
 
+v0.3 將 DB 路徑正規化後保存在執行契約；監看只讀既有 scope，缺少資料庫或 scope 時拒絕執行，不自動建立空白記憶。Agent 派工同時固定傳遞 `memory.expected_epoch`，避免子執行把派工間隙已變更的記憶當成新基線。固定驗收之後、接受 patch 之前也再檢查停止／epoch，預設只輸出 patch 時一樣適用。事故保全可用 `recover --db ... --scope ... --json ... --run ...`，細節與可執行範例在記憶操作手冊。
+
 Worker 用 workspace-write、kernel 用 read-only，拒絕互動核准；關閉可枚舉 MCP、apps、web 與 remote plugins 的本次呼叫配置，不修改帳號全域設定。這些是本機程式的防護層，不是對惡意程式的通用隔離保證。尤其寫入範圍以 diff 驗收，不是 OS 路徑 ACL；高敏感資料仍須專用權限 profile 或独立 OS 身分。
 
 ## 驗證

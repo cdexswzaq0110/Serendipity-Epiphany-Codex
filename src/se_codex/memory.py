@@ -1319,7 +1319,7 @@ class MemoryStore:
                 elif row["event_type"] == "exposed_impact":
                     exposed.append(item)
             scope = self._scope_row(conn)
-            effects = [dict(row) for row in conn.execute("SELECT effect_id, tool, target, status, external_reference, compensation_kind, compensates_effect_id FROM effects WHERE scope = ? AND effect_id IN (SELECT object_id FROM safety_events WHERE scope = ? AND incident_id = ? AND object_kind = 'effect')", (self.scope, self.scope, incident_id))]
+            effects = [dict(row) for row in conn.execute("SELECT effect_id, tool, target, status, impacted, external_reference, compensation_kind, compensates_effect_id FROM effects WHERE scope = ? AND effect_id IN (SELECT object_id FROM safety_events WHERE scope = ? AND incident_id = ? AND event_type = 'causal_impact' AND object_kind = 'effect')", (self.scope, self.scope, incident_id))]
         # Deliberately no source, memory, or artifact content in this report.
         return {
             "incident_id": incident_id,
@@ -1331,6 +1331,8 @@ class MemoryStore:
             "exposed": exposed,
             "events": events,
             "effects": effects,
+            "impacted_effect_ids": [effect["effect_id"] for effect in effects if effect["impacted"]],
+            "unsettled_effect_ids": [effect["effect_id"] for effect in effects if effect["status"] in {"planned", "uncertain", "manual_required"}],
             "unknown": "operations that bypassed this gateway are not observable",
         }
 
@@ -1680,7 +1682,27 @@ class MemoryStore:
         compensation_kind = _optional_text(arguments, "compensation_kind")
         compensates = _optional_text(arguments, "compensates_effect_id")
         with self._transaction() as conn:
-            self._require_current_run(conn, run_id)
+            scope = self._scope_row(conn)
+            containment_compensation = False
+            original = None
+            if scope["frozen"] and compensates:
+                self._operator_only()
+                evidence = _required_text(arguments, "evidence")
+                run = conn.execute(
+                    "SELECT 1 FROM runs WHERE run_id = ? AND scope = ?", (run_id, self.scope)
+                ).fetchone()
+                if run is None:
+                    raise MemoryStoreError("not_found", "run was not found in this scope")
+                original = conn.execute(
+                    "SELECT * FROM effects WHERE effect_id = ? AND scope = ?", (compensates, self.scope)
+                ).fetchone()
+                if original is None:
+                    raise MemoryStoreError("not_found", "compensated effect was not found")
+                if not original["impacted"]:
+                    raise MemoryStoreError("invalid_state", "only an impacted effect may be compensated while frozen")
+                containment_compensation = True
+            else:
+                self._require_current_run(conn, run_id)
             existing = conn.execute(
                 "SELECT * FROM effects WHERE scope = ? AND idempotency_key = ?",
                 (self.scope, idempotency_key),
@@ -1694,7 +1716,7 @@ class MemoryStore:
                     "idempotent": True,
                     "executed": False,
                 }
-            if compensates:
+            if compensates and original is None:
                 original = conn.execute(
                     "SELECT 1 FROM effects WHERE effect_id = ? AND scope = ?",
                     (compensates, self.scope),
@@ -1736,6 +1758,40 @@ class MemoryStore:
                     "compensates",
                     run_id,
                 )
+            if containment_compensation:
+                incidents = conn.execute(
+                    """SELECT event.incident_id, MIN(event.path_json) AS path_json
+                       FROM safety_events event JOIN incidents incident
+                         ON incident.incident_id = event.incident_id
+                       WHERE event.scope = ? AND event.object_kind = 'effect'
+                         AND event.object_id = ? AND event.event_type = 'causal_impact'
+                         AND incident.scope = ? AND incident.status = 'open'
+                       GROUP BY event.incident_id""",
+                    (self.scope, compensates, self.scope),
+                ).fetchall()
+                if not incidents:
+                    raise MemoryStoreError("invalid_state", "impacted effect has no open containment incident")
+                conn.execute("UPDATE effects SET impacted = 1 WHERE effect_id = ?", (effect_id,))
+                for incident in incidents:
+                    path = json.loads(incident["path_json"]) if incident["path_json"] else []
+                    path.append(self._node_dict(("effect", effect_id, None)))
+                    self._event(
+                        conn,
+                        "causal_impact",
+                        "effect",
+                        effect_id,
+                        incident_id=incident["incident_id"],
+                        reason="compensation for impacted effect",
+                        path=path,
+                    )
+                self._event(
+                    conn,
+                    "effect_planned",
+                    "effect",
+                    effect_id,
+                    reason="compensation",
+                    evidence=evidence,
+                )
         return {"effect_id": effect_id, "status": "planned", "executed": False, "idempotent": False}
 
     def _effect_record(self, arguments: dict[str, Any]) -> dict[str, Any]:
@@ -1758,6 +1814,11 @@ class MemoryStore:
             ).fetchone()
             if effect is None:
                 raise MemoryStoreError("not_found", "effect was not found in this scope")
+            if self.role == "worker":
+                self._require_current_run(conn, effect["run_id"])
+            if effect["impacted"] and status in {"applied", "failed"}:
+                self._operator_only()
+                _required_text(arguments, "evidence")
             if effect["status"] == status:
                 if (external_reference and effect['external_reference'] != external_reference) or (result_sha256 and effect['result_sha256'] != result_sha256):
                     raise MemoryStoreError('idempotency_conflict', 'recorded effect has different evidence')
@@ -1826,6 +1887,18 @@ class MemoryStore:
                     "memory_epoch": scope["epoch"],
                     "idempotent": True,
                 }
+            unsettled = conn.execute(
+                """SELECT e.effect_id FROM effects e WHERE e.scope = ?
+                   AND e.status IN ('planned', 'uncertain', 'manual_required')
+                   AND e.effect_id IN (
+                       SELECT object_id FROM safety_events
+                       WHERE scope = ? AND incident_id = ?
+                         AND event_type = 'causal_impact' AND object_kind = 'effect'
+                   )""",
+                (self.scope, self.scope, incident_id),
+            ).fetchall()
+            if unsettled:
+                raise MemoryStoreError("unsettled_effects", "causal effects require reconciliation before release")
             conn.execute(
                 """UPDATE incidents SET status = 'released', closed_at = ?, release_evidence = ?
                    WHERE incident_id = ?""",
