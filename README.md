@@ -135,6 +135,8 @@ python se.py agent --project C:/work/my-project --json C:/work/goal.json
 
 每個 worker 使用獨立 Git 副本；有依賴的工作等候上游完成，驗證成功的 patch 依序整合，再執行整合檢查。最多三次嘗試，第三次可升級一級；驗收由外層固定 argv 檢查。預設只產生已驗證 patch，加 `--apply` 才套回未變動的目標。模型說「完成」不會跳過檢查。
 
+目標 Agent 每輪在報告保存可查詢的基線、記憶 epoch、已驗證任務、patch hash 與剩餘預算；相同派工累計失敗兩次後阻擋第三次重派。詳見 [執行操作](docs/EXECUTION.md)。
+
 固定驗收命令在本機執行，必須由操作者信任。STOP、權限拒絕、失效的記憶 epoch 等阻擋不會被一般修復重試繞過；用量依宿主回報追蹤，並非硬性帳單上限。
 
 八個技能保持按需載入：kernel、memory、recover，加上需求探索、系統設計、除錯、雙軸審查和 Git 工作流。Kernel 只拿短索引，需要時才讀細節。

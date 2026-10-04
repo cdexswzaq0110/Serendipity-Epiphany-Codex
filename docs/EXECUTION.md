@@ -29,7 +29,11 @@ Task 保留 `plan` 的 `id / goal / kind / complexity / risk / uncertainty / wri
 
 這些驗證命令是操作者授權的本地程式，具有啟動本工具的 OS 權限；不要執行來自不明文件的 manifest。Worker 可以看到驗收命令，但不能改寫主程式持有的驗收清單。預設保護 `tests/`；若任務要新增測試，可在已審閱 manifest 中精確指定 `protected_paths`，保留獨立的驗收腳本。沒有測試能完整證明不存在缺陷，驗收覆蓋範圍仍由操作者決定。
 
-Agent 的 goal 契約使用 `goal / acceptance / write_paths / checks / integration_checks`。Kernel 只能選既有 check ID 與授權範圍內的子路徑，不能新增驗收命令或擴張權限。重要狀態保存在外層，不依赖長期記憶中的指令。
+Agent 的 goal 契約使用 `goal / acceptance / write_paths / checks / integration_checks`。Kernel 只能選既有 check ID 與授權範圍內的子路徑，不能新增驗收命令或擴張權限。重要狀態保存在外層，不依賴長期記憶中的指令。
+
+Agent 每輪把 `agent_state` 原子寫入既有 `report.json`：目標 ID、Git 基線、綁定的記憶 epoch、目前輪次、已驗證任務 ID、patch hash、檢查結果摘要與剩餘呼叫／觀測 token／時間。`python se.py report --run <agent目錄>` 可在執行中查看最近一次 checkpoint；完整 check 輸出留在 report/journal，Kernel 下輪只收到結構化狀態、check ID 與通過與否，不把原始工具輸出直接當成新指令。這些狀態用於追蹤，不能證明模型的事實判斷正確，也不能作為權限來源。
+
+同一份派工在一次 Agent 執行中累計兩次失敗，第三次提出完全相同的任務內容會在再次派工前阻擋。Kernel 可提出有實質差異的新策略，但仍受原有輪數、模型呼叫、時間和 token 門檻約束。此機制依任務契約的精確內容去重，不是能識別所有語意相同策略的分類器；程序中斷時只保留證據，不提供自動 resume 或重播外部效果。
 
 ## 模型與限額
 
