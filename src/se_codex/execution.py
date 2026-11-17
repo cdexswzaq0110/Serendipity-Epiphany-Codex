@@ -343,8 +343,8 @@ def execute(manifest, project: Path, tool_root: Path, state_root: Path, mode='cl
                       'Use the provided verification commands, with {python} replaced by the installed Python and {workspace} by cwd. '
                       'Return a concise account of changes and evidence.\n' + json.dumps(brief, ensure_ascii=False))
             if mode == 'closed-loop':
-                skill = ('se-debug' if feedback else 'se-two-axis-review' if route['kind'] == 'review'
-                         else 'se-system-design' if route['kind'] == 'architecture' else None)
+                skill = ('se-debug' if feedback else 'se-spec-review' if route['kind'] == 'review'
+                         else 'se-technical-design' if route['kind'] == 'architecture' else None)
                 if skill:
                     prompt += '\nRelevant engineering skill (read only if needed):\n' + json.dumps(
                         [x for x in skill_catalog(tool_root) if x['name'] == skill], ensure_ascii=False)

@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "bundle_version": "2.0.0",
+  "source_repo": "https://github.com/cdexswzaq0110/Serendipity-Epiphany.git",
+  "source_commit": "91f76d6faceccd1b84c637e580c2282001530cea",
+  "local_source": {
+    "path": "skills-local",
+    "source_repo": "https://github.com/cdexswzaq0110/Serendipity-Epiphany-Codex.git",
+    "source_commit": "db7edb0ceab01ca1dc54906e46a78fec4f47c19e",
+    "skills": [
+      "se-git",
+      "se-kernel",
+      "se-memory",
+      "se-recover"
+    ]
+  },
+  "with_extended": false,
+  "files": [
+    {
+      "path": "se-debug/SKILL.md",
+      "sha256": "5367d42771cd4e1ecb50d1573028a15ddaabc9736b70e5ea59dca8e2952d95ab"
+    },
+    {
+      "path": "se-feasibility/SKILL.md",
+      "sha256": "1a2326a311bb6e62217cf694cd064c9a044e7cc222db295e8aacd93fa862e9b2"
+    },
+    {
+      "path": "se-git/SKILL.md",
+      "sha256": "ecd6cc4661f09cd2cf6c221b6cc30ed93e6563ed8957a9127bb7d3f78bf3bae9"
+    },
+    {
+      "path": "se-kernel/references/dispatch.md",
+      "sha256": "be99d73d6905a2a17c2f61d6e4f96bb7dd2777b3503debab8ef8e803b9c90c4a"
+    },
+    {
+      "path": "se-kernel/SKILL.md",
+      "sha256": "fbc22a519f84fa0b1871f31260c0a166973fad22289d403287f35f0639f2f683"
+    },
+    {
+      "path": "se-memory/references/governance.md",
+      "sha256": "6cd40105eacbba178646c76d121c20730b3d50d43fd0632fbd04d2123f31e4aa"
+    },
+    {
+      "path": "se-memory/SKILL.md",
+      "sha256": "ca87bd1bc18cab22bdb7d354ce3656285bea90369d128c3396dfa6d0727d9dd1"
+    },
+    {
+      "path": "se-minimal-implementation/SKILL.md",
+      "sha256": "92f05df6fe68baa127dac0be5cea263c1b40de1d84964f4b75857abee4d1444d"
+    },
+    {
+      "path": "se-problem-definition/SKILL.md",
+      "sha256": "ef84bcb288c15c3b463876b4b9647e2804ca168d134239c11e5e0f637e0f541e"
+    },
+    {
+      "path": "se-product-contract/SKILL.md",
+      "sha256": "47d94ca636d1d92728aa57e7f6924702d50a4537e538cb53578492c5eb21ce84"
+    },
+    {
+      "path": "se-quality-review/references/smell-baseline.md",
+      "sha256": "0743b9ea5655f54895703fafc1c35ed1a5c7adadda9973c47ebc72814aef1ed1"
+    },
+    {
+      "path": "se-quality-review/SKILL.md",
+      "sha256": "683e847b85cf059115a0f0d490031002564489ef5f748dee7f807e6f99b06b87"
+    },
+    {
+      "path": "se-recover/references/recovery.md",
+      "sha256": "0b94031e6467cd011528e0a41fd4071e0d06636d107942084e97e5e7d67fe3ee"
+    },
+    {
+      "path": "se-recover/SKILL.md",
+      "sha256": "0d2f8dd4a024f170ba0f73524540b338940681edc46625a69b7b82cf27a7e86d"
+    },
+    {
+      "path": "se-spec-review/SKILL.md",
+      "sha256": "37f432b612ca216b87052b72ac4428b24fead08656d06b28edf0118c39f71355"
+    },
+    {
+      "path": "se-technical-design/references/data-layer.md",
+      "sha256": "08088d04e88b9457df9a5c157ec7129504bf8673b0b2bcdbca8f102b2d8536d3"
+    },
+    {
+      "path": "se-technical-design/references/deep-dive-patterns.md",
+      "sha256": "5c211a7cc21e1e4a49703504336a05c3b36e23ba59e3e41477354dfbd76a1f7b"
+    },
+    {
+      "path": "se-technical-design/references/deliverable-template.md",
+      "sha256": "efdd6d3b8594f64a9f57fa8795db34a453a6fc6e1fbceb9d793563747922ce44"
+    },
+    {
+      "path": "se-technical-design/references/estimation-tables.md",
+      "sha256": "8aa25c72f06db0aee652b997cae076970b9dd51416aeab87312086d5091e0d94"
+    },
+    {
+      "path": "se-technical-design/references/resilience-checklist.md",
+      "sha256": "924d1e152f04355c7299fc53b5b412a8d6be9730e7d207c8a19e1d26a43adf35"
+    },
+    {
+      "path": "se-technical-design/references/stages-3-5.md",
+      "sha256": "c4398ddc063294f2d03f4a41543371526e89b95026f0fa3d918416494ae9bb19"
+    },
+    {
+      "path": "se-technical-design/SKILL.md",
+      "sha256": "b766a1e47329008b77f44d93ce5874f6f0599760defecc441de9ca2c1ef3938a"
+    },
+    {
+      "path": "se-work-order/SKILL.md",
+      "sha256": "1af6c19226d87f5c38d7cb391cdc05162448780d2e43c7085de7d1a254e9bea8"
+    }
+  ]
+}

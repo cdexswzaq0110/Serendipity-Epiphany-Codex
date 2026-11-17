@@ -1,12 +1,43 @@
 ---
 name: se-debug
-description: Debug a reproducible bug, failing test, unexpected behavior, or performance regression with measured hypotheses and a retained regression test.
+description: 用可重現案例、可量測假設與一次一個變因定位根因，修正後做回歸驗證；在 bug、測試失敗或非預期行為時使用。
 ---
 
-# Debugging loop
+# 除錯
 
-Ground changes in a reproduced failure or concrete trace evidence. Prefer the smallest red case; remove conditions while preserving it. State a falsifiable mechanism and inspect its prediction before editing. When reproduction is unavailable, identify that uncertainty and choose a focused diagnostic. Fix the root cause, inspect affected callers, then rerun the failing case and retain a useful regression test.
+## 何時用／何時不用
 
-After three unsuccessful fix attempts, stop. Record the likely wrong assumption, the options and their cost, and the next observable check. Consult official documentation, then local dependency source, then a relevant reference project; ask for the missing diagnostic rather than guessing.
+在有 bug、測試失敗、間歇性錯誤或結果不符預期時使用。需求本身不明確時先釐清；沒有失敗訊號時不要以大規模重構假裝除錯。
 
-Avoid guess-and-change, repeating an unchanged attempt, changing two places at once, swallowed exceptions, sleep-based flakiness, fixing only the named caller, or deleting the regression test. Completion requires red->green evidence, a named root cause, caller coverage, and a durable test; add a short Lesson when the three-attempt limit is reached.
+## 步驟
+
+1. 建立最小可重現案例，記錄環境、輸入、預期、實際與穩定重現方式。
+2. 先做一個在修正前會紅的回饋迴圈；間歇問題先量測頻率與時間線。
+3. 從觀察提出可反證假設，為每個假設寫出預測與量測方法。
+4. 一次只改一個變因，保留結果；先縮小邊界，再讀最可能的程式路徑。
+5. 找到根因後做最小修正，不用症狀補丁掩蓋資料或狀態問題。
+6. 重跑原重現案例、相鄰回歸測試與必要整體測試。
+7. 確認修正沒有改變契約外行為；記錄根因、證據與尚未驗證處。
+8. 同一錯誤連續修正三輪仍失敗就停止，回報證據與下一個可區分假設。
+
+## 輸出要回答的問題
+
+- 如何穩定重現，修正前的失敗證據是什麼？
+- 測了哪些假設，每次量測排除了什麼？
+- 根因與症狀之間的因果鏈是什麼？
+- 最小修正是什麼，回歸驗證結果如何？
+- 還有哪些未驗證或間歇風險？
+
+## 驗證
+
+- 原案例在修正前失敗、修正後通過。
+- 每次實驗只改一個變因，結果可追溯。
+- 相鄰回歸測試在同一版本通過。
+- 根因說明能預測觀察到的症狀，不只是相關性。
+
+## 反模式
+
+- 同時改多處，成功後不知道哪個變因有效。
+- 沒重現就憑直覺修正。
+- 只重跑變綠的單一測試，不查回歸。
+- 用 retry、sleep 或寬鬆例外處理掩蓋未知根因。

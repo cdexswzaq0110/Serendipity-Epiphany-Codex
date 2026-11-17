@@ -41,7 +41,48 @@ def _profiles(project_root: Path) -> dict[str, dict[str, str]]:
         if all(isinstance(value, str) and value.strip() for value in fallback.values()):
             profiles['terra'] = fallback
 
-    return profiles
+    return {
+        role: {
+            **profile,
+            "requested_model": profile["model"],
+            "resolved_model": profile["model"],
+            "resolution_source": "project_config",
+            "resolution_reason": "configured model; live availability not probed",
+        }
+        for role, profile in profiles.items()
+        if profile.get("model")
+    }
+
+
+def resolve_profiles(profiles: dict[str, dict[str, str]], models: list[dict[str, Any]]) -> dict[str, dict[str, str]]:
+    """Resolve every configured profile against a live app-server model/list catalog."""
+    available = {row.get("model"): row for row in models if isinstance(row.get("model"), str)}
+    if not available:
+        return profiles
+    default = next((row for row in models if row.get("is_default") and row.get("model") in available), models[0])
+    resolved: dict[str, dict[str, str]] = {}
+    for role, profile in profiles.items():
+        requested = profile["model"]
+        row = available.get(requested)
+        reason = "requested model is available"
+        if row is None:
+            row = default
+            reason = f"requested model {requested!r} is unavailable; used app-server default/fallback"
+        efforts = row.get("efforts") or []
+        effort = profile.get("effort", "medium")
+        if efforts and effort not in efforts:
+            effort = row.get("default_effort") if row.get("default_effort") in efforts else efforts[0]
+            reason += f"; requested effort {profile.get('effort')!r} is unavailable"
+        resolved[role] = {
+            **profile,
+            "model": row["model"],
+            "effort": effort,
+            "requested_model": requested,
+            "resolved_model": row["model"],
+            "resolution_source": "app_server_model_list",
+            "resolution_reason": reason,
+        }
+    return resolved
 
 
 def _profile(data: dict[str, Any]) -> dict[str, str]:

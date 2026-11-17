@@ -10,7 +10,7 @@ Python 3.11+ · 標準庫實作 · MIT License
 
 </div>
 
-Codex 開發工具：可獨立使用的執行 harness，以及以模型決策驅動的目標 Agent。Astra 規劃，Sol / Terra / Luna 分工；附記憶准入、使用紀錄、污染隔離與恢復工具。Python 3.11+，只用標準庫。
+Codex 開發工具：可獨立使用的執行 harness，以及以模型決策驅動的目標 Agent。Python 3.11+，只用標準庫。有 Agora 時由 Agora 執行並注入同步的 SE skills；`se.py` 是沒有 Agora 時的獨立模式。
 
 這是從原 Serendipity — Epiphany 的工作流與記憶治理設計改編的獨立 Codex 版本，保留 MIT 授權。來源專案沒有被覆寫。參考取捨見 [現況分析](docs/INSPECTION.md) 與 [實作規格](docs/IMPLEMENTATION_PLAN.md)。
 
@@ -57,7 +57,7 @@ flowchart TB
 | `se.py run` — 執行 harness | 預先定義的任務與依賴 | 固定任務檢查與整合檢查 |
 | `se.py agent` — 目標 Agent | Kernel 根據目標與觀察結果決定派工 | 仍須通過使用者指定的固定驗收 |
 
-圖中的 Astra 是指定核心模型；啟動前須以 `doctor --live` 確認宿主實際可用模型。模型配置不代表該主機已具備對應能力。
+啟動前可用 `doctor --live` 查詢 app-server `model/list`。路由保留 requested model，並記錄 resolved model、來源與降級原因；`models_cache.json` 只作診斷提示。
 
 ---
 
@@ -77,13 +77,13 @@ python se.py safety-probe
 
 `plan` 回傳模型與不衝突的執行批次；`demo` 在暫存資料庫實際演練污染與恢復；`test` 執行回歸測試。以上指令均不呼叫推論模型、不使用付費 API。`doctor --live` 只讀本機 app-server 的能力清單；`safety-probe` 只操作拋棄式測試檔。
 
-2026-09-07 的本機結果：恢復演練通過，Windows 沙箱探測通過；CLI 0.147.0 的模型清單有 Sol/Terra/Luna，未列出 `gpt-6-astra`，專案 hooks 尚未受信任。`doctor --live` 因此會回傳 `ok:false` 與 exit 3，這是診斷結果。完整驗證及界線見 [EVALUATION.md](docs/EVALUATION.md)。
+2026-09-07 的歷史結果顯示模型清單沒有當時要求的 Astra。v0.4 起，`doctor --live` 會用即時清單產生 resolved profile 並說明降級；其他未就緒項目（例如 hooks 未受信任）仍會使整體診斷失敗。完整驗證及界線見 [EVALUATION.md](docs/EVALUATION.md)。
 
 ## 開發任務如何分工
 
 | 工作 | 角色 | 模型 | 推理等級 |
 |---|---|---|---|
-| 核心調度、系統規劃、架構與最終整合 | kernel | `gpt-6-astra` | high |
+| 核心調度、系統規劃、架構與最終整合 | kernel | 專案預設；live 時可解析降級 | 依 resolved profile |
 | 複雜、高風險、高不確定性的工作 | sol | `gpt-5.6-sol` | high |
 | 一般開發與測試 | terra | `gpt-5.6-terra` | medium |
 | 簡單、低風險且驗收明確的工作 | luna | `gpt-5.6-luna` | low |
@@ -92,7 +92,7 @@ python se.py safety-probe
 
 原生配置在 `.codex/config.toml` 與 `.codex/agents/*.toml`。路由器從這些檔案讀模型，不重複維護另一份模型清單。`plan` 只規劃；v0.2 的 `run` 真正啟動 Codex app-server 工作 task，`agent` 則由模型觀察目標、自行決定派工並接收驗證結果。兩者都留下 thread/turn ID、宿主模型資料、用量和整合 patch，詳見 [執行操作](docs/EXECUTION.md)。
 
-若模型缺少、使用量耗盡或推理等級不支援，應回報實際限制。更改模型是明確的設定修改，沒有自動猜測 alias 或偷偷降級。已知需求不足、寫入範圍重疊、依賴循環等會在派工前被拒絕。
+若要求的模型不存在，live 執行以 app-server 清單選擇其預設／可用模型，並留下 requested、resolved、來源與原因；不猜 alias。使用量耗盡、需求不足、寫入範圍重疊或依賴循環仍會明確停止。
 
 ## 真正執行與目標 Agent
 
@@ -133,13 +133,13 @@ python se.py run --project C:/work/my-project --json C:/work/task.json
 python se.py agent --project C:/work/my-project --json C:/work/goal.json
 ```
 
-每個 worker 使用獨立 Git 副本；有依賴的工作等候上游完成，驗證成功的 patch 依序整合，再執行整合檢查。最多三次嘗試，第三次可升級一級；驗收由外層固定 argv 檢查。預設只產生已驗證 patch，加 `--apply` 才套回未變動的目標。模型說「完成」不會跳過檢查。
+每個 worker 使用獨立 Git 副本；有依賴的工作等候上游完成。預設先單次執行，再由外層固定 argv 驗收；只有驗收失敗才進入有限修復，最多三次且第三次可升級一級。成功不再多呼叫模型作「完成」判斷。這個預設來自 [PILOT_RESULTS](docs/PILOT_RESULTS.md)：小樣本中 closed-loop 比 single-pass 更慢、更貴且通過率更差。預設只產生已驗證 patch，加 `--apply` 才套回未變動的目標。
 
 目標 Agent 每輪在報告保存可查詢的基線、記憶 epoch、已驗證任務、patch hash 與剩餘預算；相同派工累計失敗兩次後阻擋第三次重派。詳見 [執行操作](docs/EXECUTION.md)。
 
 固定驗收命令在本機執行，必須由操作者信任。STOP、權限拒絕、失效的記憶 epoch 等阻擋不會被一般修復重試繞過；用量依宿主回報追蹤，並非硬性帳單上限。
 
-八個技能保持按需載入：kernel、memory、recover，加上需求探索、系統設計、除錯、雙軸審查和 Git 工作流。Kernel 只拿短索引，需要時才讀細節。
+十三個技能保持按需載入：SE bundle 的九個核心 skill，加上 Codex 專屬的 kernel、memory、recover、Git。規格與品質審查分開，Kernel 只拿短索引，需要時才讀細節。
 
 相同真實任務的對照入口是 `python se.py benchmark --json examples/benchmark.json`。它使用固定 commit、固定驗收、相同模型／effort 比較流程，再固定流程／effort 比較模型；詳見 [評測設計](docs/BENCHMARK.md)。測試通過和評測結果必須分開解讀。
 
@@ -211,6 +211,16 @@ python se.py memory-config --db .se-state/memory.sqlite --scope project
 
 ## 安裝到另一個專案
 
+先從明確指定的 SE bundle 同步 skill（不猜 sibling repo，也不用 symlink）：
+
+```powershell
+# Windows PowerShell
+python scripts/sync_skills.py install --bundle C:/path/to/se-bundle-2.0.0 --dest .agents/skills
+python scripts/sync_skills.py check --dest .agents/skills
+```
+
+預設只安裝九個核心 skill；需要 SE extended 集合時才加 `--with-extended`。四個 Codex 專屬 skill 的 canonical 來源在 `skills-local/`，同步器會拒絕名稱衝突並以暫存目錄驗證後整體替換目的地。
+
 ```powershell
 # Windows PowerShell；先將 $target 設為你要使用的現有 Git 專案
 $target = Read-Host '目標 Git 專案的完整路徑'
@@ -218,7 +228,7 @@ python se.py install --target $target
 python se.py install --target $target --apply
 ```
 
-第一個指令只列計畫；第二個新增 `.codex` 原生角色、8 個 skills、精簡 `AGENTS.md` 與 `.se-codex` runtime/文件。已有檔案內容不同就整批停止，不覆寫、不自動合併。相同內容可重複安裝。沒有全域安裝、沒有依賴套件下載；遇既有 AGENTS/config 時，依 dry-run 清單逐項整合即可。
+第一個指令只列計畫；第二個新增 `.codex` 原生角色、13 個 skills、精簡 `AGENTS.md` 與 `.se-codex` runtime/文件。已有檔案內容不同就整批停止，不覆寫、不自動合併。相同內容可重複安裝。沒有全域安裝、沒有依賴套件下載；遇既有 AGENTS/config 時，依 dry-run 清單逐項整合即可。
 
 安裝後從目標根目錄執行 `python .se-codex/se.py demo`；診斷目標配置時加 `--project .`。解除安裝請依安裝結果的 created 清單審閱個別新增檔案；工具沒有提供會誤刪其他檔案的遞迴解除安裝。
 
@@ -231,7 +241,9 @@ Serendipity-Epiphany-Codex/
 ├── .codex/
 │   ├── config.toml           # Codex 原生設定
 │   └── agents/               # Astra / Sol / Terra / Luna 角色配置
-├── .agents/skills/           # 8 個按需載入技能
+├── skills-local/             # 4 個 SE-Codex 專屬 canonical skills
+├── scripts/sync_skills.py    # 合併、原子安裝與 hash 驗證
+├── .agents/skills/           # 9 個 SE 核心＋4 個本機 skill 的生成結果
 ├── src/se_codex/             # 調度、執行、記憶與恢復 runtime
 ├── tests/                   # 回歸與整合測試
 ├── examples/                # 任務、目標與評測契約範例

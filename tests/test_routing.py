@@ -80,7 +80,7 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(result["max_parallel"], 3)
         self.assertEqual(result["waves"], [["architecture", "research"], ["implementation"], ["review"]])
         by_id = {item["id"]: item for item in result["tasks"]}
-        self.assertEqual(by_id["architecture"]["model"], "gpt-6-astra")
+        self.assertEqual(by_id["architecture"]["model"], "gpt-5.6-sol")
         self.assertEqual(by_id["implementation"]["model"], "gpt-5.6-sol")
         self.assertEqual(by_id["review"]["model"], "gpt-5.6-terra")
         self.assertEqual(by_id["research"]["model"], "gpt-5.6-luna")

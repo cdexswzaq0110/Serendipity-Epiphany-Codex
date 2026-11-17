@@ -387,7 +387,8 @@ def _resolve_commit(repo: Path, commit: str) -> str:
 
 def _git(argv: list[str], cwd: Path) -> str:
     completed = subprocess.run(
-        ["git", *argv], cwd=cwd, text=True, encoding="utf-8", capture_output=True, timeout=30, check=False
+        ["git", "-c", f"safe.directory={cwd.resolve().as_posix()}", *argv], cwd=cwd,
+        text=True, encoding="utf-8", capture_output=True, timeout=30, check=False
     )
     if completed.returncode != 0:
         message = completed.stderr.strip() or completed.stdout.strip() or "git command failed"
