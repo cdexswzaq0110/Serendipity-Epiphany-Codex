@@ -32,6 +32,10 @@ description: 在規格全數通過後獨立檢查工程品質，為每個發現�
 - 嚴重度依後果而非個人風格決定。
 - 沒有把偏好、未證實猜測或規格缺漏包裝成品質 finding。
 
+## 完整做法
+
+code smell 基線：讀 [references/smell-baseline.md](references/smell-baseline.md)。finding 格式與彙整流程在 `se-spec-review` 的完整做法裡。
+
 ## 反模式
 
 - 規格未過就花成本做品質審查。

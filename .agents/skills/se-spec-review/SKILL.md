@@ -34,6 +34,10 @@ description: 對驗收條件逐條做 pass、fail 或 cannot_verify 判定並要
 - cannot_verify 都有原因，沒有用模糊措辭逃避判定。
 - 審查期間未修改產物，也沒有混入品質評論。
 
+## 完整做法
+
+雙軸審查的完整流程（釘住基準、找兩軸來源、隔離派發、finding 格式、finding 是主張不是命令、彙整、Test That Cannot Fail）：讀 [references/two-axis-review.md](references/two-axis-review.md)。
+
 ## 反模式
 
 - 用整體印象一次宣布通過。

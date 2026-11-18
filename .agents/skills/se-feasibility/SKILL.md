@@ -33,6 +33,10 @@ description: 評估技術、資料、AI 必要性、時程、成本、風險與�
 - 結論只在列出的前提內成立，沒有把未知寫成肯定。
 - 至少比較一個較小替代方案與不做的成本。
 
+## 完整做法
+
+原 v1 的完整可行性報告流程：讀 [references/v1-feasibility.md](references/v1-feasibility.md)。
+
 ## 反模式
 
 - 用「技術上做得到」取代產品可行性。

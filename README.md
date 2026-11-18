@@ -215,7 +215,7 @@ python se.py memory-config --db .se-state/memory.sqlite --scope project
 
 ```powershell
 # Windows PowerShell
-python scripts/sync_skills.py install --bundle C:/path/to/se-bundle-2.0.0 --dest .agents/skills
+python scripts/sync_skills.py install --bundle C:/path/to/se-bundle-2.1.0 --dest .agents/skills
 python scripts/sync_skills.py check --dest .agents/skills
 ```
 

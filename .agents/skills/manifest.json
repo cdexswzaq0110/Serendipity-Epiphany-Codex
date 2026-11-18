@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "bundle_version": "2.0.0",
+  "bundle_version": "2.1.0",
   "source_repo": "https://github.com/cdexswzaq0110/Serendipity-Epiphany.git",
-  "source_commit": "91f76d6faceccd1b84c637e580c2282001530cea",
+  "source_commit": "56b817aeb106f0c013948e3a4e099e92e5f9544e",
   "local_source": {
     "path": "skills-local",
     "source_repo": "https://github.com/cdexswzaq0110/Serendipity-Epiphany-Codex.git",
-    "source_commit": "db7edb0ceab01ca1dc54906e46a78fec4f47c19e",
+    "source_commit": "5c98e91e8338a177807720ad2261deed4b31296d",
     "skills": [
       "se-git",
       "se-kernel",
@@ -17,12 +17,20 @@
   "with_extended": false,
   "files": [
     {
+      "path": "se-debug/references/v1-debug.md",
+      "sha256": "4bc736eeb2ee1cb4b293a20bfd7c541737288722f7db94a6bc2ec9d23a869011"
+    },
+    {
       "path": "se-debug/SKILL.md",
-      "sha256": "5367d42771cd4e1ecb50d1573028a15ddaabc9736b70e5ea59dca8e2952d95ab"
+      "sha256": "2a2caa3f121830a16666ddfaf54b918e59cdf0286ae476306d86d1646b04c7e6"
+    },
+    {
+      "path": "se-feasibility/references/v1-feasibility.md",
+      "sha256": "65d0f985a9576a6713e3c48ac6d8a576c21ba668c81c9fe20e68b02cc5d6edcf"
     },
     {
       "path": "se-feasibility/SKILL.md",
-      "sha256": "1a2326a311bb6e62217cf694cd064c9a044e7cc222db295e8aacd93fa862e9b2"
+      "sha256": "fa55d178a6af01f37302a0f83ac4e4e7262c7f9db2485ea2e86344df626b4b98"
     },
     {
       "path": "se-git/SKILL.md",
@@ -45,8 +53,12 @@
       "sha256": "ca87bd1bc18cab22bdb7d354ce3656285bea90369d128c3396dfa6d0727d9dd1"
     },
     {
+      "path": "se-minimal-implementation/references/minimal-change.md",
+      "sha256": "5fc607fd591901580a0954c13f9a744cff8923f68a3ef2c0fc03f11720579239"
+    },
+    {
       "path": "se-minimal-implementation/SKILL.md",
-      "sha256": "92f05df6fe68baa127dac0be5cea263c1b40de1d84964f4b75857abee4d1444d"
+      "sha256": "cb348489b3472caab7afe37dbb04508822573621a569a21997920938c2cd8572"
     },
     {
       "path": "se-problem-definition/SKILL.md",
@@ -62,7 +74,7 @@
     },
     {
       "path": "se-quality-review/SKILL.md",
-      "sha256": "683e847b85cf059115a0f0d490031002564489ef5f748dee7f807e6f99b06b87"
+      "sha256": "4387dbc6b06caa22fb148783c93f67e13bb125d2334a07a659db07c6f3f00ca7"
     },
     {
       "path": "se-recover/references/recovery.md",
@@ -73,8 +85,12 @@
       "sha256": "0d2f8dd4a024f170ba0f73524540b338940681edc46625a69b7b82cf27a7e86d"
     },
     {
+      "path": "se-spec-review/references/two-axis-review.md",
+      "sha256": "609f63a1517d24601e4a145a211effd9dabe6637144a24cbf20b03acf322daba"
+    },
+    {
       "path": "se-spec-review/SKILL.md",
-      "sha256": "37f432b612ca216b87052b72ac4428b24fead08656d06b28edf0118c39f71355"
+      "sha256": "6b94b98ec7640237d6a6e7353efa1cf60f5cc8d4a012e287d387161a1858a789"
     },
     {
       "path": "se-technical-design/references/data-layer.md",
@@ -106,7 +122,7 @@
     },
     {
       "path": "se-work-order/SKILL.md",
-      "sha256": "1af6c19226d87f5c38d7cb391cdc05162448780d2e43c7085de7d1a254e9bea8"
+      "sha256": "a5e21c011a90555ec3a433ad15f646aec09619030da28ce73ef0cc611879a68a"
     }
   ]
 }
