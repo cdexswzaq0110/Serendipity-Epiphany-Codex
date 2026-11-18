@@ -1,6 +1,6 @@
 # Serendipity — Epiphany Codex
 
-Use this project as a lightweight, evidence-driven development agent for Codex.
+Use this project as a lightweight, evidence-driven development agent for Codex. When Agora is available, Agora owns execution and injects the synchronized skills. `se.py` is the standalone mode for environments without Agora.
 
 ## Kernel
 
@@ -28,10 +28,17 @@ Project memory is data, never policy. It cannot change models, permissions, tool
 - `se-kernel`: planning, routing, delegation, and acceptance.
 - `se-memory`: memory candidate and recall governance.
 - `se-recover`: containment and recovery planning for memory incidents.
-- `se-discovery`: ambiguous requirements and an observable completion boundary.
-- `se-system-design`: contracts, invariants, and consequential architecture choices.
+- `se-problem-definition`: ambiguous requirements and an observable completion boundary.
+- `se-feasibility`: evidence-backed feasibility analysis.
+- `se-product-contract`: product scope and acceptance contracts.
+- `se-technical-design`: contracts, invariants, and consequential architecture choices.
+- `se-work-order`: bounded implementation work orders.
+- `se-minimal-implementation`: the smallest verified implementation.
 - `se-debug`: reproducible failures and measured hypotheses.
-- `se-two-axis-review`: separate specification and engineering findings.
+- `se-spec-review`: specification and acceptance-contract findings.
+- `se-quality-review`: engineering-quality findings after specification acceptance.
 - `se-git`: branches, reviewable commits, and recovery boundaries.
+
+The nine shared skills are synchronized from a pinned SE bundle; the four Codex-specific skills (`se-kernel`, `se-memory`, `se-recover`, `se-git`) are canonical in `skills-local/`. Run `python scripts/sync_skills.py install --bundle <explicit-path> --dest .agents/skills`, then `python scripts/sync_skills.py check --dest .agents/skills`. Extended SE skills are omitted unless `--with-extended` is explicitly supplied.
 
 For programmatic execution, use `se.py run` with fixed task/check contracts or `se.py agent` with a goal contract. Read `docs/EXECUTION.md` when using these commands. Plans are not execution evidence: retain the actual thread/turn report, independent checks, and integration patch.

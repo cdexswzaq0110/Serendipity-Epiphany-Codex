@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 
 from .runtime import AppServer, _list_models, _model_rows
-from .routing import validate_capabilities
+from .routing import resolve_profiles, validate_capabilities
 
 
 def run_codex(root: Path, prompt: str, model: str, effort: str, *, seconds=300,
@@ -58,7 +58,13 @@ def run_codex(root: Path, prompt: str, model: str, effort: str, *, seconds=300,
                 raise ValueError('timeout or cancelled')
             return min(20, value)
 
-        catalog = {row['model']: row['efforts'] for row in _model_rows(_list_models(server, started + seconds))}
+        rows = _model_rows(_list_models(server, started + seconds))
+        resolved = resolve_profiles({'request': {'model': model, 'effort': effort}}, rows)['request']
+        model, effort = resolved['model'], resolved['effort']
+        result.update(resolved_model=model, resolved_effort=effort,
+                      resolution_source=resolved['resolution_source'],
+                      resolution_reason=resolved['resolution_reason'])
+        catalog = {row['model']: row['efforts'] for row in rows}
         validate_capabilities({'model': model, 'effort': effort}, catalog)
         config = server.call('config/read', {'includeLayers': False}, timeout=remaining()).get('config') or {}
         overrides = {'model_reasoning_effort': effort, 'web_search': 'disabled',

@@ -19,7 +19,7 @@ class CodexConfigurationTests(unittest.TestCase):
         with (ROOT / ".codex" / "config.toml").open("rb") as config_file:
             config = tomllib.load(config_file)
 
-        self.assertEqual(config["model"], "gpt-6-astra")
+        self.assertEqual(config["model"], "gpt-5.6-sol")
         self.assertEqual(config["model_reasoning_effort"], "high")
         self.assertEqual(config["sandbox_mode"], "workspace-write")
         self.assertEqual(config["approval_policy"], "on-request")

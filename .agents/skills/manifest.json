@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "bundle_version": "2.1.0",
+  "source_repo": "https://github.com/cdexswzaq0110/Serendipity-Epiphany.git",
+  "source_commit": "56b817aeb106f0c013948e3a4e099e92e5f9544e",
+  "local_source": {
+    "path": "skills-local",
+    "source_repo": "https://github.com/cdexswzaq0110/Serendipity-Epiphany-Codex.git",
+    "source_commit": "5c98e91e8338a177807720ad2261deed4b31296d",
+    "skills": [
+      "se-git",
+      "se-kernel",
+      "se-memory",
+      "se-recover"
+    ]
+  },
+  "with_extended": false,
+  "files": [
+    {
+      "path": "se-debug/references/v1-debug.md",
+      "sha256": "4bc736eeb2ee1cb4b293a20bfd7c541737288722f7db94a6bc2ec9d23a869011"
+    },
+    {
+      "path": "se-debug/SKILL.md",
+      "sha256": "2a2caa3f121830a16666ddfaf54b918e59cdf0286ae476306d86d1646b04c7e6"
+    },
+    {
+      "path": "se-feasibility/references/v1-feasibility.md",
+      "sha256": "65d0f985a9576a6713e3c48ac6d8a576c21ba668c81c9fe20e68b02cc5d6edcf"
+    },
+    {
+      "path": "se-feasibility/SKILL.md",
+      "sha256": "fa55d178a6af01f37302a0f83ac4e4e7262c7f9db2485ea2e86344df626b4b98"
+    },
+    {
+      "path": "se-git/SKILL.md",
+      "sha256": "ecd6cc4661f09cd2cf6c221b6cc30ed93e6563ed8957a9127bb7d3f78bf3bae9"
+    },
+    {
+      "path": "se-kernel/references/dispatch.md",
+      "sha256": "be99d73d6905a2a17c2f61d6e4f96bb7dd2777b3503debab8ef8e803b9c90c4a"
+    },
+    {
+      "path": "se-kernel/SKILL.md",
+      "sha256": "fbc22a519f84fa0b1871f31260c0a166973fad22289d403287f35f0639f2f683"
+    },
+    {
+      "path": "se-memory/references/governance.md",
+      "sha256": "6cd40105eacbba178646c76d121c20730b3d50d43fd0632fbd04d2123f31e4aa"
+    },
+    {
+      "path": "se-memory/SKILL.md",
+      "sha256": "ca87bd1bc18cab22bdb7d354ce3656285bea90369d128c3396dfa6d0727d9dd1"
+    },
+    {
+      "path": "se-minimal-implementation/references/minimal-change.md",
+      "sha256": "5fc607fd591901580a0954c13f9a744cff8923f68a3ef2c0fc03f11720579239"
+    },
+    {
+      "path": "se-minimal-implementation/SKILL.md",
+      "sha256": "cb348489b3472caab7afe37dbb04508822573621a569a21997920938c2cd8572"
+    },
+    {
+      "path": "se-problem-definition/SKILL.md",
+      "sha256": "ef84bcb288c15c3b463876b4b9647e2804ca168d134239c11e5e0f637e0f541e"
+    },
+    {
+      "path": "se-product-contract/SKILL.md",
+      "sha256": "47d94ca636d1d92728aa57e7f6924702d50a4537e538cb53578492c5eb21ce84"
+    },
+    {
+      "path": "se-quality-review/references/smell-baseline.md",
+      "sha256": "0743b9ea5655f54895703fafc1c35ed1a5c7adadda9973c47ebc72814aef1ed1"
+    },
+    {
+      "path": "se-quality-review/SKILL.md",
+      "sha256": "4387dbc6b06caa22fb148783c93f67e13bb125d2334a07a659db07c6f3f00ca7"
+    },
+    {
+      "path": "se-recover/references/recovery.md",
+      "sha256": "0b94031e6467cd011528e0a41fd4071e0d06636d107942084e97e5e7d67fe3ee"
+    },
+    {
+      "path": "se-recover/SKILL.md",
+      "sha256": "0d2f8dd4a024f170ba0f73524540b338940681edc46625a69b7b82cf27a7e86d"
+    },
+    {
+      "path": "se-spec-review/references/two-axis-review.md",
+      "sha256": "609f63a1517d24601e4a145a211effd9dabe6637144a24cbf20b03acf322daba"
+    },
+    {
+      "path": "se-spec-review/SKILL.md",
+      "sha256": "6b94b98ec7640237d6a6e7353efa1cf60f5cc8d4a012e287d387161a1858a789"
+    },
+    {
+      "path": "se-technical-design/references/data-layer.md",
+      "sha256": "08088d04e88b9457df9a5c157ec7129504bf8673b0b2bcdbca8f102b2d8536d3"
+    },
+    {
+      "path": "se-technical-design/references/deep-dive-patterns.md",
+      "sha256": "5c211a7cc21e1e4a49703504336a05c3b36e23ba59e3e41477354dfbd76a1f7b"
+    },
+    {
+      "path": "se-technical-design/references/deliverable-template.md",
+      "sha256": "efdd6d3b8594f64a9f57fa8795db34a453a6fc6e1fbceb9d793563747922ce44"
+    },
+    {
+      "path": "se-technical-design/references/estimation-tables.md",
+      "sha256": "8aa25c72f06db0aee652b997cae076970b9dd51416aeab87312086d5091e0d94"
+    },
+    {
+      "path": "se-technical-design/references/resilience-checklist.md",
+      "sha256": "924d1e152f04355c7299fc53b5b412a8d6be9730e7d207c8a19e1d26a43adf35"
+    },
+    {
+      "path": "se-technical-design/references/stages-3-5.md",
+      "sha256": "c4398ddc063294f2d03f4a41543371526e89b95026f0fa3d918416494ae9bb19"
+    },
+    {
+      "path": "se-technical-design/SKILL.md",
+      "sha256": "b766a1e47329008b77f44d93ce5874f6f0599760defecc441de9ca2c1ef3938a"
+    },
+    {
+      "path": "se-work-order/SKILL.md",
+      "sha256": "a5e21c011a90555ec3a433ad15f646aec09619030da28ce73ef0cc611879a68a"
+    }
+  ]
+}

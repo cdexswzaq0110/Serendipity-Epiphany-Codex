@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import shutil
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -69,15 +71,26 @@ class RuntimeAndHookTests(unittest.TestCase):
         self.assertTrue(any('se-memory' in message for message in report['limitations']))
 
     def test_live_doctor_keeps_diagnostics_when_kernel_model_is_missing(self):
-        report = inspect_project(ROOT, live=True, server_factory=FakeServer)
+        # The repo now requests an available model; recreate the missing-model case in a copy.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for name in (".codex", ".agents"):
+                shutil.copytree(ROOT / name, root / name)
+            config = root / ".codex" / "config.toml"
+            text = config.read_text(encoding="utf-8").replace('model = "gpt-5.6-sol"', 'model = "gpt-6-astra"', 1)
+            config.write_text(text, encoding="utf-8")
+            report = inspect_project(root, live=True, server_factory=FakeServer)
         readiness = {item["role"]: item for item in report["readiness"]}
-        self.assertFalse(readiness["kernel"]["ready"])
-        self.assertEqual(readiness["kernel"]["model"], "gpt-6-astra")
+        self.assertTrue(readiness["kernel"]["ready"])
+        self.assertEqual(readiness["kernel"]["model"], "gpt-5.6-sol")
+        self.assertEqual(report["profiles"]["kernel"]["requested_model"], "gpt-6-astra")
+        self.assertEqual(report["profiles"]["kernel"]["resolution_source"], "app_server_model_list")
         self.assertTrue(readiness["terra"]["ready"])
         self.assertEqual([item["name"] for item in report["skills_discovery"]["skills"]], ["se-kernel"])
-        self.assertEqual(len(report["hooks_discovery"]["hooks"]), 1)
+        # Hook discovery is covered by the two tests below (the fake server reports hooks under
+        # the original repo path, which the temporary copy filters out by design).
         self.assertFalse(report["live_verified"])
-        self.assertTrue(any("gpt-6-astra" in item for item in report["limitations"]))
+        self.assertIn("unavailable", report["profiles"]["kernel"]["resolution_reason"])
 
     def test_model_failure_does_not_discard_skill_or_hook_diagnostics(self):
         report = inspect_project(ROOT, live=True, server_factory=ModelFailureServer)

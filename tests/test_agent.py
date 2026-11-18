@@ -172,7 +172,7 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(executor_calls, [])
         self.assertFalse((self.project / "outside.txt").exists())
 
-    def test_model_decision_dispatch_observation_done_is_a_closed_loop(self):
+    def test_successful_dispatch_is_accepted_by_external_checks_without_done_round(self):
         def worker(root, _kwargs):
             (root / "app.txt").write_text("new\n", encoding="utf-8")
             return inference("implemented in assigned workspace")
@@ -181,7 +181,6 @@ class AgentTests(unittest.TestCase):
             [
                 inference(decision("dispatch", tasks=[self._task()])),
                 worker,
-                inference(decision("done", "observed verified execution")),
             ]
         )
 
@@ -191,12 +190,12 @@ class AgentTests(unittest.TestCase):
 
         self.assertEqual(report["status"], "completed", report.get("error"))
         self.assertTrue(report["applied"])
-        self.assertEqual([item["action"] for item in report["decisions"]], ["dispatch", "done"])
+        self.assertEqual([item["action"] for item in report["decisions"]], ["dispatch"])
         self.assertEqual(report["executions"][0]["status"], "completed")
         self.assertEqual(report["executions"][0]["tasks"][0]["status"], "integrated")
         self.assertEqual((self.project / "app.txt").read_text(encoding="utf-8"), "new\n")
-        self.assertEqual(report["model_calls"], 3)
-        self.assertEqual(report["usage"]["total_tokens"], 60)
+        self.assertEqual(report["model_calls"], 2)
+        self.assertEqual(report["usage"]["total_tokens"], 40)
         self.assertEqual(report['agent_state']['status'], 'completed')
         self.assertEqual(report['agent_state']['completed_task_ids'], ['implement'])
         self.assertEqual(report['agent_state']['accepted_check_ids'], ['content'])
@@ -204,10 +203,9 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(report['agent_state']['artifact_hashes'][-1]['sha256'],
                          hashlib.sha256(Path(report['patch']).read_bytes()).hexdigest())
         self.assertEqual([call["model"] for call in runner.calls],
-                         ["gpt-6-astra", "gpt-5.6-luna", "gpt-6-astra"])
+                         ["gpt-5.6-sol", "gpt-5.6-luna"])
         self.assertTrue(runner.calls[0]["read_only"])
         self.assertFalse(runner.calls[1]["read_only"])
-        self.assertIn('"status": "completed"', runner.calls[2]["prompt"])
 
     def test_running_checkpoint_is_readable_before_kernel_decision(self):
         observed = []

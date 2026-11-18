@@ -52,7 +52,7 @@ class IntegrationTests(unittest.TestCase):
             self.assertFalse(installed['conflicts'])
             entry = target / '.se-codex/se.py'
             from se_codex.execution import skill_catalog
-            self.assertEqual(len(skill_catalog(target / '.se-codex')), 8)
+            self.assertEqual(len(skill_catalog(target / '.se-codex')), 13)  # 9 synced from SE + 4 local
             self.assertTrue((target / '.se-codex/docs/EXECUTION.md').is_file())
             governance = (target / '.agents/skills/se-memory/references/governance.md').read_text(encoding='utf-8')
             runbook = re.search(r'`([^`]*docs/MEMORY_RUNBOOK.md)`', governance).group(1)

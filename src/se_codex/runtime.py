@@ -133,6 +133,21 @@ def _summary(error: Exception) -> str:
     return f"{error.__class__.__name__}: {message}"
 
 
+def _models_cache_diagnostic() -> dict:
+    """Describe the optional cache without using it for availability decisions."""
+    path = Path.home() / ".codex" / "models_cache.json"
+    result = {"path": str(path), "exists": path.is_file(), "authoritative": False}
+    if not path.is_file():
+        return result
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+        rows = value.get("models", value.get("data", [])) if isinstance(value, dict) else value
+        result["entries"] = len(rows) if isinstance(rows, list) else None
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        result["error"] = _summary(error)
+    return result
+
+
 def _model_rows(catalog: list[dict]) -> list[dict]:
     rows = []
     for model in catalog:
@@ -147,7 +162,9 @@ def _model_rows(catalog: list[dict]) -> list[dict]:
                 efforts.append(entry)
             elif isinstance(entry, dict) and isinstance(entry.get("reasoningEffort"), str):
                 efforts.append(entry["reasoningEffort"])
-        rows.append({"model": model_id, "efforts": efforts})
+        rows.append({"model": model_id, "efforts": efforts,
+                     "is_default": bool(model.get("isDefault", model.get("is_default", False))),
+                     "default_effort": model.get("defaultReasoningEffort")})
     return rows
 
 
@@ -295,7 +312,7 @@ def _add_readiness_limitations(result: dict) -> None:
 
 
 def inspect_project(root: Path, live: bool = False, server_factory=AppServer) -> dict:
-    from .routing import _profiles
+    from .routing import _profiles, resolve_profiles
 
     root = root.resolve()
     profiles = _profiles(root)
@@ -306,7 +323,8 @@ def inspect_project(root: Path, live: bool = False, server_factory=AppServer) ->
               "security_mode": "governance; protected execution requires a verified permission profile",
               "readiness": _readiness(profiles),
               "limitations": ["live model, skill, and hook capabilities were not queried"],
-              "live_verified": False}
+              "live_verified": False,
+              "models_cache": _models_cache_diagnostic()}
     result['inference_verified'] = False
     if not live:
         return result
@@ -338,6 +356,8 @@ def inspect_project(root: Path, live: bool = False, server_factory=AppServer) ->
         except Exception as error:
             result["hooks_discovery"] = {"hooks": [], "error": _summary(error)}
             result["limitations"].append(f"hooks discovery unavailable: {_summary(error)}")
+        profiles = resolve_profiles(profiles, model_rows or [])
+        result["profiles"] = profiles
         result["readiness"] = _readiness(profiles, model_rows, live=True)
         _add_readiness_limitations(result)
         if all(item["ready"] for item in result["readiness"]) and len(result["limitations"]) == 0:

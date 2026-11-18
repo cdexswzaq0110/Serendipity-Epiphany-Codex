@@ -227,6 +227,30 @@ def run_agent(spec, project: Path, tool_root: Path, state_root: Path, *, apply=F
                 continue
             git(workspace, 'add', '--all')
             git(workspace, 'commit', '--quiet', '--allow-empty', '-m', 'Accepted agent execution ' + str(round_index + 1))
+            # A successful worker execution is accepted by the fixed external checks, not by
+            # another model opinion. Only failed checks return to the kernel for repair.
+            report['checks'] = verify_checks(spec['checks'], spec['integration_checks'], workspace,
+                                              journal.event, deadline)
+            if all(row['passed'] for row in report['checks']):
+                if git(workspace, 'status', '--porcelain', '--untracked-files=all').strip() or stopped():
+                    raise ValueError('Verification changed the result or execution was stopped')
+                patch = git(workspace, 'diff', '--binary', base, 'HEAD')
+                output = directory / 'result.patch'
+                output.write_bytes(patch)
+                report.update(status='completed', patch=str(output))
+                state['accepted_check_ids'] = [row['id'] for row in report['checks']]
+                state['artifact_hashes'].append({'kind': 'final_patch',
+                                                 'sha256': hashlib.sha256(patch).hexdigest()})
+                if apply:
+                    checked_project(project)
+                    if git(project, 'rev-parse', 'HEAD').decode().strip() != base or stopped():
+                        raise ValueError('Target or memory changed before apply')
+                    apply_patch(project, patch)
+                    report['applied'] = True
+                break
+            observations.append({'action': 'external_verification_failed',
+                                 'checks': _check_status(report['checks'])})
+            checkpoint()
         else:
             raise ValueError('Agent exhausted its decision rounds without verified completion')
     except (ValueError, OSError) as error:
